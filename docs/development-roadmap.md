@@ -58,3 +58,40 @@ Once the solo-playable slice feels satisfying, tackle the larger PRD beats:
 - **Community & Social**: Leaderboards, shareable run summaries, daily challenges.
 
 This ordering keeps the near-term focus on moment-to-moment fun and clarity for a single evaluator while leaving space for the ambitious long-term vision once the core loop earns its keep.
+
+## Milestone 3 – Community Playtest Prep (1–2 sprints)
+1. **Stability & Telemetry Hardening**
+   - Stand up opt-in analytics with privacy-safe event batching to capture session length, drop-off points, and assistant usage.
+   - Instrument backend errors and latency budgets, surfacing dashboards/alerts ahead of external playtests.
+   - Expand automated regression suite (API contract tests + storybook visual diffs) to guard against rapid iteration regressions.
+2. **Content & UX Polish**
+   - Author 20+ additional mid/late-run events with branching resolutions that showcase assistant synergies.
+   - Layer in dynamic soundtrack cues and haptic-friendly feedback hooks for mobile browsers.
+   - Add accessibility passes: keyboard navigation, screen-reader labels, colorblind-safe stability meter palettes.
+3. **Playtest Operations**
+   - Package Docker-based deployment for cloud staging with seeded progression data.
+   - Create feedback pipelines (in-game bug reporter, survey links) wired to a triage board.
+   - Produce a short tutorial video and quickstart doc for community hosts.
+
+**Exit Criteria**: A limited external cohort can onboard without developer hand-holding, with telemetry and tooling ready to absorb qualitative feedback.
+
+## Milestone 4 – Live Ops Foundations (2–3 sprints)
+1. **Scalable Persistence Layer**
+   - Migrate profile data to a managed database (Supabase/Postgres or DynamoDB) with migration scripts and environment isolation.
+   - Add auth-lite identities (magic link or device code) to sync progression across devices while respecting the "lazy" fantasy.
+2. **Dynamic Content Delivery**
+   - Build a content pipeline for hot-loading new events/assistants without redeploying the backend (CMS or Git-based registry).
+   - Enable limited-time challenges and rotating modifiers with server-driven configurations.
+3. **Monetization-Adjacent Hooks**
+   - Introduce cosmetic unlock slots (divine avatar frames, godly office décor) gated by achievements only—no payments yet.
+   - Prototype a soft-currency loop (Favor) earned from streaks to unlock cosmetics and meta upgrades.
+
+**Exit Criteria**: The game can run as a small live service with safe content updates, synchronized progression, and the scaffolding for future monetization experiments.
+
+## Vision Horizon – Full Release Readiness
+- **Co-op & Asynchronous Play**: Explore duet runs where two lazy gods negotiate over shared stability, and weekly asynchronous challenges with ghost data.
+- **Narrative Campaign**: Ship a multi-chapter arc with bespoke art, voiceover, and scripted assistant evolutions.
+- **Mod & Creator Tools**: Expose event scripting toolkit and moderation pipeline for community-authored content.
+- **Commercialization**: Evaluate premium unlocks, season passes, or DLC expansions once retention metrics justify investment.
+
+Delivering Milestones 3 and 4 positions the team for a confident early access launch, while the Vision Horizon captures the stretch goals that can be sequenced based on player demand and team capacity.
