@@ -30,17 +30,17 @@ export default function DecisionButton({ choice, onSelect, disabled }: DecisionB
       disabled={disabled}
       onClick={() => onSelect(choice.key)}
       className={clsx(
-        'group relative flex items-center justify-between overflow-hidden rounded-2xl border border-white/10 px-5 py-4 text-left text-white shadow-lg transition',
+        'group relative flex w-full items-center justify-between overflow-hidden rounded-2xl border border-white/10 px-5 py-4 text-left text-white shadow-lg transition',
         disabled ? 'opacity-60' : 'hover:border-white/25 hover:shadow-xl',
       )}
     >
       <div className={clsx('absolute inset-0 bg-gradient-to-r opacity-90', gradientClass)} aria-hidden />
-      <div className="relative z-10 flex flex-col gap-2">
-        <span className="text-sm font-semibold uppercase tracking-[0.25em] text-white/80">
+      <div className="relative z-10 mr-4 flex min-w-0 flex-1 flex-col gap-2">
+        <span className="text-[0.7rem] font-semibold uppercase tracking-[0.25em] text-white/80">
           {formatDecisionLabel(choice.key)}
         </span>
-        <span className="text-base font-medium text-white/90">{choice.label}</span>
-        <div className="flex flex-wrap gap-2 text-xs text-white/80">
+        <span className="break-words text-base font-medium leading-snug text-white/90">{choice.label}</span>
+        <div className="flex flex-wrap gap-2 text-[0.7rem] text-white/80">
           {impact.stabilityDelta !== 0 && (
             <span className="rounded-full bg-white/15 px-3 py-1">
               Stability {impact.stabilityDelta > 0 ? '▲' : '▼'} {Math.abs(impact.stabilityDelta * 100).toFixed(0)}%
@@ -52,7 +52,7 @@ export default function DecisionButton({ choice, onSelect, disabled }: DecisionB
         </div>
       </div>
       <motion.span
-        className="relative z-10 text-2xl opacity-80"
+        className="relative z-10 shrink-0 text-2xl opacity-80"
         animate={{ rotate: disabled ? 0 : [0, 5, -5, 0] }}
         transition={{ duration: 2.5, repeat: disabled ? 0 : Infinity, ease: 'easeInOut' }}
       >

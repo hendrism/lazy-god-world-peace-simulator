@@ -20,7 +20,7 @@ export default function GameScreen() {
   const runEnded = state.run_status !== 'active';
 
   return (
-    <div className="flex min-h-[calc(100vh-3rem)] flex-col gap-5 pb-16">
+    <div className="flex min-h-[calc(100vh-4rem)] flex-col gap-6 pb-12">
       <HeaderCard state={state} outcomeSummary={outcomeSummary} mode={mode} />
 
       {error && (
@@ -75,7 +75,7 @@ export default function GameScreen() {
 
       <StatsPanel state={state} />
 
-      <footer className="mt-auto text-center text-[0.65rem] uppercase tracking-[0.3em] text-white/30">
+      <footer className="mt-auto px-2 text-center text-[0.6rem] uppercase tracking-[0.2em] text-white/30">
         Lazy God Prototype · Optimized for Vercel Edge
       </footer>
     </div>
