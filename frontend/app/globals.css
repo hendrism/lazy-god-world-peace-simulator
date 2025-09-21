@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: radial-gradient(circle at 20% 20%, rgba(79, 209, 197, 0.16), transparent 45%),
+    radial-gradient(circle at 80% 0%, rgba(156, 108, 255, 0.2), transparent 52%),
+    #050316;
+  color: white;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(156, 108, 255, 0.12), transparent 60%),
+    linear-gradient(20deg, rgba(79, 209, 197, 0.1), transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.gradient-ring {
+  position: relative;
+}
+
+.gradient-ring::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(120deg, rgba(156, 108, 255, 0.65), rgba(79, 209, 197, 0.4));
+  opacity: 0.85;
+  filter: blur(12px);
+}
+
+.glass-panel {
+  @apply bg-night-800/80 backdrop-blur-xl border border-white/10 shadow-card;
+}
+
+button:focus-visible {
+  outline: 2px solid theme('colors.accent.secondary');
+  outline-offset: 2px;
+}
+
+.scroll-fade {
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, #000 12%, #000 88%, rgba(0, 0, 0, 0) 100%);
+}
