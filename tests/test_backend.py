@@ -16,6 +16,8 @@ def test_start_and_get_state_flow():
     assert response.status_code == 200
     payload = response.json()
     run_id = payload["run_id"]
+    session_id = payload["session_id"]
+    assert session_id
 
     state_resp = client.get(f"/runs/{run_id}/state")
     assert state_resp.status_code == 200
@@ -28,17 +30,22 @@ def test_start_and_get_state_flow():
 
 def test_next_and_decision_cycle():
     response = client.post("/runs/start", json={})
-    run_id = response.json()["run_id"]
+    payload = response.json()
+    run_id = payload["run_id"]
+    session_id = payload["session_id"]
 
-    next_resp = client.post(f"/runs/{run_id}/next")
+    next_resp = client.post(f"/runs/{run_id}/next", json={"session_id": session_id})
     assert next_resp.status_code == 200
-    event = next_resp.json()["event"]
+    next_payload = next_resp.json()
+    assert next_payload["session_id"] == session_id
+    event = next_payload["event"]
     assert event["template_key"]
     assert "tags" in event
 
-    decision_body = {"event_id": event["id"], "choice": "peace"}
+    decision_body = {"event_id": event["id"], "choice": "peace", "session_id": session_id}
     decision_resp = client.post(f"/runs/{run_id}/decision", json=decision_body)
     assert decision_resp.status_code == 200
     outcome = decision_resp.json()
+    assert outcome["session_id"] == session_id
     assert "state" in outcome
     assert "outcome_summary" in outcome

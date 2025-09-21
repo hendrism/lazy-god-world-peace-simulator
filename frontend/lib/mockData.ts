@@ -161,6 +161,10 @@ export function createMockSession(): MockSession {
     world_theme: 'classic_fantasy',
     run_status: 'active',
     turn_limit: 20,
+    seed: 1337,
+    stability_history: [0.62],
+    revealed_traits: Object.fromEntries(mockNations.map((nation) => [nation.id, []])),
+    god_quips: [],
   };
 
   const events: GameEvent[] = [
@@ -205,6 +209,8 @@ export function applyMockChoice(
     events_log: [...state.events_log, { ...event, resolved: true }],
   };
 
+  const previousStabilityState = nextState.stability_state;
+
   const selectedChoice = event.choices.find((c) => c.key === choice);
   if (!selectedChoice) {
     return {
@@ -231,6 +237,11 @@ export function applyMockChoice(
   const chaosStreak = choice === 'hostile' ? nextState.chaos_streak + 1 : choice === 'peace' ? 0 : nextState.chaos_streak;
 
   const stability_state = computeStabilityState(stability);
+  const stability_history = [...nextState.stability_history, stability];
+  const god_quips = [...nextState.god_quips];
+  if (stability_state !== previousStabilityState) {
+    god_quips.push(`The heavens shift to a ${stability_state.replace('_', ' ')} era.`);
+  }
 
   let run_status: GameState['run_status'] = nextState.run_status;
   if (stability <= 0) {
@@ -256,6 +267,8 @@ export function applyMockChoice(
       peace_streak: peaceStreak,
       chaos_streak: chaosStreak,
       stability_state,
+      stability_history,
+      god_quips,
       turn: nextState.turn + 1,
       run_status,
     },

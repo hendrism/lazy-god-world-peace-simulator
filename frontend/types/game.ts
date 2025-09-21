@@ -85,19 +85,30 @@ export interface GameState {
   world_theme: string;
   run_status: RunStatus;
   turn_limit: number;
+  seed: number;
+  stability_history: number[];
+  revealed_traits: Record<string, string[]>;
+  god_quips: string[];
 }
 
 export interface StartRunResponse {
   run_id: string;
+  session_id: string;
   state: GameState;
+  pending_event: GameEvent | null;
 }
 
 export interface NextEventResponse {
+  run_id: string;
+  session_id: string | null;
   event: GameEvent;
   state: GameState;
 }
 
 export interface DecisionResponse {
+  run_id: string;
+  session_id: string | null;
   state: GameState;
+  resolved_event: GameEvent;
   outcome_summary: string;
 }

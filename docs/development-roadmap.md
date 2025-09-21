@@ -1,5 +1,10 @@
 # Development Plan: Lazy God – World Peace Simulator
 
+## Status Snapshot
+- ✅ **Milestone 0 – Stabilize the Prototype** complete. The core engine now supports deterministic seeding, expanded content, and end-to-end CLI/API runs that stay stable for 10+ turns.
+- ✅ **Milestone 1 – Solo-Friendly UI Vertical Slice** implemented in this sprint. A persistent session manager, onboarding overlay, seed controls, and animated feedback now wrap the FastAPI backend for playtesting.
+- ⏭️ **Milestone 2 – Meta Progression Taste Test** is next, focusing on assistants, persistence, and narrative polish atop the new session framework.
+
 ## Immediate Goal
 Deliver a self-contained build that one person can play end-to-end to evaluate the full fantasy of being a "lazy god". The focus is on polishing the existing Python/FastAPI prototype, wrapping it with a lightweight web client, and filling in just enough content and meta systems to make a single run feel complete.
 
@@ -19,18 +24,18 @@ Deliver a self-contained build that one person can play end-to-end to evaluate t
 **Exit Criteria**: CLI/API runs stay stable for 10+ turns, stability/score feedback is legible, and there is enough authored content that consecutive runs feel fresh.
 
 ## Milestone 1 – Wrap with a Solo-Friendly UI (1 sprint)
-1. **FastAPI Cleanup**
-   - Normalize payloads for game state, pending event, and decision outcomes.
-   - Add a lightweight session manager to keep a single user's run alive between requests.
-2. **Web Client Vertical Slice**
+1. **FastAPI Cleanup** ✅
+   - Normalize payloads for game state, pending event, and decision outcomes with explicit response envelopes.
+   - Add a lightweight session manager to keep a single user's run alive between requests via reusable session IDs.
+2. **Web Client Vertical Slice** ✅
    - Build a mobile-first React page that consumes the API and mirrors the CLI flow (two nations, choices, stability meter, score, assistant hints).
-   - Include simple animations/feedback for stability shifts and streak milestones.
-   - Ship a basic onboarding overlay (what is happening, how to advance turns).
-3. **Playtest Harness**
+   - Include simple animations/feedback for stability shifts and streak milestones using Framer Motion callouts.
+   - Ship a basic onboarding overlay (what is happening, how to advance turns) with seed-aware session controls.
+3. **Playtest Harness** ✅
    - Add seed selector + restart controls in the UI so the solo player can explore quickly.
-   - Capture run summary at the end (final stability, score, highlights) for manual review.
+   - Capture run summary at the end (final stability, score, highlights) for manual review and clipboard export.
 
-**Exit Criteria**: A single user can launch the web client locally, play a 5–10 minute session without crashes, and understand outcomes through UI feedback.
+**Exit Criteria**: ✅ A single user can launch the web client locally, play a 5–10 minute session without crashes, and understand outcomes through UI feedback.
 
 ## Milestone 2 – Meta Progression Taste Test (1 sprint)
 1. **Assistant System**
