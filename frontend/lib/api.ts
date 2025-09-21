@@ -17,20 +17,39 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function startRun(): Promise<StartRunResponse> {
+interface StartRunOptions {
+  sessionId?: string | null;
+  seed?: number | null;
+  resume?: boolean;
+}
+
+export async function startRun(options: StartRunOptions = {}): Promise<StartRunResponse> {
   const response = await fetch(`${API_BASE_URL}/runs/start`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({}),
+    body: JSON.stringify({
+      session_id: options.sessionId ?? undefined,
+      seed: options.seed ?? undefined,
+      resume: options.resume ?? true,
+    }),
   });
   return handleResponse<StartRunResponse>(response);
 }
 
-export async function fetchNextEvent(runId: string): Promise<NextEventResponse> {
+export async function fetchNextEvent(
+  runId: string,
+  sessionId?: string | null,
+): Promise<NextEventResponse> {
   const response = await fetch(`${API_BASE_URL}/runs/${runId}/next`, {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      session_id: sessionId ?? undefined,
+    }),
   });
   return handleResponse<NextEventResponse>(response);
 }
@@ -39,6 +58,7 @@ export async function submitDecision(
   runId: string,
   eventId: string,
   choice: DecisionKey,
+  sessionId?: string | null,
 ): Promise<DecisionResponse> {
   const response = await fetch(`${API_BASE_URL}/runs/${runId}/decision`, {
     method: 'POST',
@@ -48,6 +68,7 @@ export async function submitDecision(
     body: JSON.stringify({
       event_id: eventId,
       choice,
+      session_id: sessionId ?? undefined,
     }),
   });
   return handleResponse<DecisionResponse>(response);
