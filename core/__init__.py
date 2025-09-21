@@ -7,15 +7,15 @@ and deterministic to enable reproducible runs in the CLI and API layers.
 The design is inspired by the technical specification provided in the PRD.
 """
 
-from .models import Nation, Assistant, Event, GameState, StabilityState
-from .game import GameEngine, Decision
+from .models import Decision, Nation, Assistant, Event, GameState, StabilityState
+from .game import GameEngine
 
 __all__ = [
+    "Decision",
     "Nation",
     "Assistant",
     "Event",
     "GameState",
     "StabilityState",
     "GameEngine",
-    "Decision",
 ]

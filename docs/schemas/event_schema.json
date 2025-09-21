@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "event.schema.json",
+  "type": "object",
+  "required": ["id", "kind", "turn", "nations", "summary", "choices", "rng_seed"],
+  "properties": {
+    "id": { "type": "string" },
+    "kind": { "type": "string" },
+    "turn": { "type": "integer", "minimum": 1 },
+    "nations": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "summary": { "type": "string" },
+    "choices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "label", "effects"],
+        "properties": {
+          "key": { "type": "string" },
+          "label": { "type": "string" },
+          "effects": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["target", "attribute", "delta"],
+              "properties": {
+                "target": { "type": "string" },
+                "attribute": { "type": "string" },
+                "delta": { "type": "number" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "constraints": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": false
+      }
+    },
+    "assistant_influence": { "type": "array", "items": { "type": "string" } },
+    "resolved": { "type": "boolean" },
+    "resolution": { "type": "object" },
+    "rng_seed": { "type": "integer" }
+  },
+  "additionalProperties": false
+}

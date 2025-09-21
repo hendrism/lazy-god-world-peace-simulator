@@ -53,6 +53,12 @@ class StabilityState(str, enum.Enum):
     chaotic = "chaotic"
 
 
+class Decision(str, enum.Enum):
+    peace = "peace"
+    hostile = "hostile"
+    trade = "trade"
+
+
 HiddenTrait = str  # for simplicity; would be enum in full implementation
 RelationStatus = str  # neutral, allied, hostile, trading, etc.
 

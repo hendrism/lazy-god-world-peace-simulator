@@ -16,7 +16,8 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from ..core.game import GameEngine
+from core.game import GameEngine
+from core.models import Decision
 
 
 app = FastAPI(title="Lazy God API", version="0.1.0", description="Proof of concept for Lazy God game")
@@ -35,7 +36,7 @@ class StartRunResponse(BaseModel):
     state: dict
 
 
-@app.post("/run/start", response_model=StartRunResponse)
+@app.post("/runs/start", response_model=StartRunResponse)
 async def start_run(payload: StartRunRequest):
     state = engine.start_run(
         world_theme=payload.world_theme, turn_limit=payload.turn_limit, difficulty=payload.difficulty
@@ -48,50 +49,48 @@ class NextEventResponse(BaseModel):
     state: dict
 
 
-@app.post("/run/next", response_model=NextEventResponse)
+@app.post("/runs/{run_id}/next", response_model=NextEventResponse)
 async def next_event(run_id: str):
     event, error = engine.next_turn(run_id)
     if error:
         raise HTTPException(status_code=400, detail=error)
     state = engine.get_state(run_id)
-    assert state is not None
+    if state is None:
+        raise HTTPException(status_code=404, detail="RUN_NOT_FOUND")
+    if event is None:
+        raise HTTPException(status_code=400, detail="NO_EVENT")
     return NextEventResponse(event=event.to_dict(), state=state.to_dict())
 
 
 class DecisionRequest(BaseModel):
-    run_id: str
     event_id: str
-    choice: str
+    choice: Decision
 
 
 class DecisionResponse(BaseModel):
-    updated_state: dict
-    outcome: dict
+    state: dict
+    outcome_summary: str
 
 
-@app.post("/run/decision", response_model=DecisionResponse)
-async def decision(payload: DecisionRequest):
-    state, error = engine.make_decision(payload.run_id, payload.event_id, payload.choice)
+@app.post("/runs/{run_id}/decision", response_model=DecisionResponse)
+async def decision(run_id: str, payload: DecisionRequest):
+    state, error = engine.make_decision(run_id, payload.event_id, payload.choice)
     if error:
         raise HTTPException(status_code=400, detail=error)
-    assert state is not None
-    # Return only diff of outcome (resolution) and updated state
+    if state is None:
+        raise HTTPException(status_code=404, detail="RUN_NOT_FOUND")
+    if not state.events_log:
+        raise HTTPException(status_code=400, detail="NO_EVENT")
     event = state.events_log[-1]
-    assert event.resolution is not None
-    outcome = {
-        "chosen_key": event.resolution.chosen_key,
-        "stability_delta": event.resolution.stability_delta,
-        "score_delta": event.resolution.score_delta,
-        "logs": event.resolution.logs,
-    }
-    return DecisionResponse(updated_state=state.to_dict(), outcome=outcome)
+    summary = event.resolution.logs[-1] if event.resolution and event.resolution.logs else "Decision applied."
+    return DecisionResponse(state=state.to_dict(), outcome_summary=summary)
 
 
 class StateResponse(BaseModel):
     state: dict
 
 
-@app.get("/run/state/{run_id}", response_model=StateResponse)
+@app.get("/runs/{run_id}/state", response_model=StateResponse)
 async def get_state(run_id: str):
     state = engine.get_state(run_id)
     if not state:
