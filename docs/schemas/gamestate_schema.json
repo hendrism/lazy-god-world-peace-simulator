@@ -2,7 +2,25 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "gamestate.schema.json",
   "type": "object",
-  "required": ["run_id", "turn", "stability", "stability_state", "score", "peace_streak", "chaos_streak", "nations", "assistants", "events_log", "world_theme", "run_status", "turn_limit"],
+  "required": [
+    "run_id",
+    "turn",
+    "stability",
+    "stability_state",
+    "score",
+    "peace_streak",
+    "chaos_streak",
+    "nations",
+    "assistants",
+    "events_log",
+    "world_theme",
+    "run_status",
+    "turn_limit",
+    "seed",
+    "stability_history",
+    "revealed_traits",
+    "god_quips"
+  ],
   "properties": {
     "run_id": { "type": "string" },
     "turn": { "type": "integer", "minimum": 1 },
@@ -11,15 +29,34 @@
     "score": { "type": "integer", "minimum": 0 },
     "peace_streak": { "type": "integer", "minimum": 0 },
     "chaos_streak": { "type": "integer", "minimum": 0 },
-    "nations": { "type": "array" },
-    "assistants": { "type": "array" },
-    "events_log": { "type": "array" },
+    "nations": {
+      "type": "object",
+      "additionalProperties": { "$ref": "nation.schema.json" }
+    },
+    "assistants": {
+      "type": "object",
+      "additionalProperties": { "$ref": "assistant.schema.json" }
+    },
+    "events_log": {
+      "type": "array",
+      "items": { "$ref": "event.schema.json" }
+    },
     "world_theme": { "type": "string" },
     "run_status": { "type": "string" },
     "turn_limit": { "type": "integer" },
-    "autosave_slot": { "type": "string" },
-    "created_at": { "type": "string" },
-    "ended_at": { "type": ["string", "null"] }
+    "seed": { "type": "integer" },
+    "stability_history": {
+      "type": "array",
+      "items": { "type": "number", "minimum": 0, "maximum": 1 }
+    },
+    "revealed_traits": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "god_quips": { "type": "array", "items": { "type": "string" } }
   },
   "additionalProperties": false
 }

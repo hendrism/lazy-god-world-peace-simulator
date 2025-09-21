@@ -8,5 +8,6 @@ Schemas included:
 - event_schema.json
 - gamestate_schema.json
 
-Validation tip:
-- Use ajv or python-jsonschema to validate example payloads from the running API.
+Validation tips:
+- Install the project requirements (`pip install -r backend/requirements.txt`) and run the automated contract tests with `pytest`.
+- Use `jsonschema` (already bundled in the requirements) to validate payloads captured from the CLI or API against these definitions.
