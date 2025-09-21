@@ -16,6 +16,7 @@ body {
     radial-gradient(circle at 80% 0%, rgba(156, 108, 255, 0.2), transparent 52%),
     #050316;
   color: white;
+  overflow-x: hidden;
 }
 
 body::before {
@@ -46,6 +47,7 @@ body::before {
 .glass-panel {
   @apply bg-night-800/80 backdrop-blur-xl border border-white/10 shadow-card;
 }
+
 
 button:focus-visible {
   outline: 2px solid theme('colors.accent.secondary');
