@@ -1,108 +1,55 @@
 # Development Plan: Lazy God – World Peace Simulator
 
-## 0. Baseline Assessment (Current State)
-- **Playable Scope**: Python proof-of-concept with in-memory game engine (`core/`), FastAPI backend (`backend/`), and CLI prototype (`prototype/`).
-- **Game Systems**: Procedural nation generation (race, economy, demeanor, hidden traits), three-choice interaction events, stability meter (0.0–1.0 → 5 states), score/streak logic, single assistant (Prophet), simple run lifecycle (start, next turn, decision, end).
-- **Tooling**: JSON Schemas, lightweight tests, no persistence, no mobile UI, limited content variety.
-- **Gap vs. PRD**: Missing mobile UX, assistant progression, meta upgrades, god personality systems, expanded events, world types, monetization, accessibility, and online/community features.
+## Immediate Goal
+Deliver a self-contained build that one person can play end-to-end to evaluate the full fantasy of being a "lazy god". The focus is on polishing the existing Python/FastAPI prototype, wrapping it with a lightweight web client, and filling in just enough content and meta systems to make a single run feel complete.
 
-The following roadmap iteratively expands the prototype into the full PRD vision while keeping runs short, replayable, and content rich.
+## Milestone 0 – Stabilize the Prototype (1 sprint)
+1. **Core Engine Hardening**
+   - Tighten turn loop: ensure start → event selection → decision resolution → stability update → end-of-run works without manual resets.
+   - Formalize the stability meter (5 named states) and score calculation inside the engine and expose through backend responses.
+   - Add deterministic seeding to support quick iteration and regression checks.
+2. **Content Sweep**
+   - Expand nation generator to at least 8 themed archetypes with distinct modifiers.
+   - Create a bank of 30–40 interaction events covering diplomacy, disasters, and comedic beats.
+   - Introduce light hidden trait reveals (Prophet hints, streak bonuses) and scripted god quips tied to stability swings.
+3. **Quality & Tooling**
+   - Flesh out schema validations, pytest coverage, and linting for core + backend.
+   - Document how to launch a run via CLI or API so playtesters can start immediately.
 
-## Phase 1 – MVP Feature Completion (aligns with PRD §6)
-1. **Nation & Event System Enhancements**
-   - Extend generators to reach 6–10 distinct races/economies with themed descriptors and unique modifiers.
-   - Introduce basic hidden trait revelation logic (chance per turn, Prophet hinting) and assistant hooks.
-   - Add binary decision flow enforcing one pending event at a time and expose through backend API.
-2. **Stability & Scoring Polish**
-   - Implement the three-state meter (Peaceful/Neutral/Chaotic) with thresholds and visuals (API enum + frontend asset).
-   - Add peace streak multiplier logic and scoreboard payloads.
-3. **Assistants & Meta Unlocks**
-   - Implement Diplomat (conflict reduction) and Prophet (instability warnings) with unlock conditions and persistent meta profile (temporary JSON storage).
-4. **God Commentary Layer**
-   - Author text-only quips tied to stability transitions, streaks, and assistant triggers.
-5. **Frontend Prototype**
-   - Build mobile-first web UI (React or Expo/React Native web) mirroring CLI flow: display two nations, decision buttons, stability meter, score.
-6. **Technical Foundations**
-   - Set up automated testing (pytest, linting, TypeScript checks), CI workflow, and documentation on running MVP.
+**Exit Criteria**: CLI/API runs stay stable for 10+ turns, stability/score feedback is legible, and there is enough authored content that consecutive runs feel fresh.
 
-**Exit Criteria**: Playable vertical slice on web/mobile browser featuring 5–10 minute runs, two assistants, textual commentary, persistence of meta unlocks, and basic analytics hooks.
+## Milestone 1 – Wrap with a Solo-Friendly UI (1 sprint)
+1. **FastAPI Cleanup**
+   - Normalize payloads for game state, pending event, and decision outcomes.
+   - Add a lightweight session manager to keep a single user's run alive between requests.
+2. **Web Client Vertical Slice**
+   - Build a mobile-first React page that consumes the API and mirrors the CLI flow (two nations, choices, stability meter, score, assistant hints).
+   - Include simple animations/feedback for stability shifts and streak milestones.
+   - Ship a basic onboarding overlay (what is happening, how to advance turns).
+3. **Playtest Harness**
+   - Add seed selector + restart controls in the UI so the solo player can explore quickly.
+   - Capture run summary at the end (final stability, score, highlights) for manual review.
 
-## Phase 2 – Mobile Experience & Infrastructure
-1. **Mobile Client**
-   - Choose tech stack (React Native + Expo). Port MVP UI, ensure thumb-friendly layout, haptics, offline cache.
-   - Implement save/resume (local storage + backend sync) and simple tutorial/onboarding.
-2. **Backend Services**
-   - Introduce persistence layer (SQLite/PostgreSQL) for runs, profiles, unlocks. Add authentication scaffold (guest + optional account).
-   - Harden API (validation via schemas, rate limiting, deterministic seeds for replays).
-3. **Audio & Personality**
-   - Expand god commentary bank, add optional VO stubs, integrate sound effects for stability shifts.
-4. **QA & Telemetry**
-   - Add unit/integration tests for engine, instrumentation for decision analytics, crash/error reporting.
+**Exit Criteria**: A single user can launch the web client locally, play a 5–10 minute session without crashes, and understand outcomes through UI feedback.
 
-**Exit Criteria**: Mobile build testable on devices, resilient backend with persistent profiles, richer feedback loop (audio/visual), instrumentation baseline.
+## Milestone 2 – Meta Progression Taste Test (1 sprint)
+1. **Assistant System**
+   - Implement Prophet (baseline) and Diplomat with simple unlock logic (e.g., reach streak of 5).
+   - Surface assistant hints and cooldowns in the UI.
+2. **Persistent Profile (Local)**
+   - Store unlock flags and high scores in a JSON/SQLite file on the backend.
+   - Display progression summary when starting a new run.
+3. **Narrative Polish**
+   - Add god commentary variations for win/loss states and assistant triggers.
+   - Sprinkle in 5–7 rare events to reward repeated playthroughs.
 
-## Phase 3 – Content & Systems Depth
-1. **Nation & Event Diversity**
-   - Scale to 20+ nations, economy variants, demeanor-specific event chains. Introduce rarity tiers and event modifiers driven by world stability.
-   - Implement hidden trait discovery mechanics (spies, upgrades) and relational memory between nations (rivalries, alliances).
-2. **Advanced Assistants & Upgrades**
-   - Add Peacekeeper, Spy Network, Court Mage with cooldowns, unique UI interactions, and upgrade tracks.
-   - Build meta-progression tree (currency rewards, unlock requirements, difficulty mutators).
-3. **Dynamic World Stability**
-   - Expand meter to 5-state spectrum described in PRD with escalating event probabilities and recovery mechanics.
-4. **Narrative & Humor Systems**
-   - Create templated storytelling snippets, god personas with selectable voice packs, and dynamic reactions to streaks/failures.
+**Exit Criteria**: Completing runs feeds into light progression that persists between sessions and showcases the long-term direction of the game.
 
-**Exit Criteria**: Runs feel varied with deeper assistant management, world state evolution, and narrative flavor meeting mid-term PRD expectations.
+## After Playable – Stretch Backlog
+Once the solo-playable slice feels satisfying, tackle the larger PRD beats:
+- **Mobile/Offline Support**: Evaluate Expo/React Native port, add save/resume.
+- **Expanded Content & Systems**: Scale nations/events, deepen stability dynamics, introduce additional assistants and meta tree.
+- **Live Ops Foundations**: Persistence service, telemetry, cosmetic hooks, localization.
+- **Community & Social**: Leaderboards, shareable run summaries, daily challenges.
 
-## Phase 4 – Late-Game & Replayability Hooks
-1. **Cosmic & Rival Threats**
-   - Add multi-continent worlds, rival gods affecting events, global crises (asteroids, eldritch awakenings).
-2. **Campaign & Scenario Mode**
-   - Scripted runs with specific objectives, branching events, narrative arcs.
-3. **Prestige/Ascension**
-   - Introduce reset loop rewarding prestige currency unlocking new themes, modifiers, and higher difficulties.
-4. **Social Features**
-   - Leaderboards, shareable run summaries, daily challenges with fixed seeds.
-
-**Exit Criteria**: High replayability with long-term goals, social competition, and multiple late-game systems.
-
-## Phase 5 – Live Operations & Monetization (Vision Stage)
-1. **Cosmetics & Personalization**
-   - Cosmetic god skins, assistant outfits, world themes purchasable or unlockable; ensure no pay-to-win.
-2. **Seasonal Content Pipeline**
-   - Tooling for monthly content drops (nations, events, assistants), live ops calendar, limited-time challenges.
-3. **Community & Accessibility Enhancements**
-   - Player quote sharing, localization, screen-reader-friendly UI, colorblind options, configurable text size.
-4. **Monetization Infrastructure**
-   - In-app purchase framework, cosmetic store, analytics for conversion funnels.
-
-**Exit Criteria**: Sustainable content cadence, ethical monetization, robust accessibility support, community engagement loop.
-
-## Cross-Cutting Workstreams
-- **Design**: Iterate on open questions (decision depth, randomness vs. determinism, alternate scoring paths) via prototypes and user research each phase.
-- **Production**: Maintain backlog using roadmap phases, establish milestones, and conduct regular playtests.
-- **Engineering**: Continuous refactoring, performance profiling for mobile, automated regression tests, documentation.
-- **Art/Audio**: Develop visual identity, UI themes per world type, SFX/VO library; coordinate with monetization cosmetics.
-
-## Milestone Dependencies
-- Phase 1 completion is prerequisite for mobile build (Phase 2).
-- Persistent data models introduced in Phase 2 underpin expansions in Phases 3–5.
-- Content tooling should be built during Phase 3 to support later live ops.
-
-## Risk Mitigation & Research Tasks
-- **Decision Complexity**: Prototype variants (binary vs. ternary choices, auto-resolve assistants) to finalize design direction early in Phase 1.
-- **Randomness vs. Determinism**: Add seed controls and telemetry to study player sentiment.
-- **Scoring Variants**: Experiment with chaos-aligned scoring paths during Phase 3 content expansion.
-- **Performance**: Monitor mobile performance budgets; test on low-end devices starting Phase 2.
-
-## Deliverables Summary
-| Phase | Target Duration | Key Deliverables |
-|-------|-----------------|------------------|
-| 1 | 2 sprints | MVP slice: web/mobile prototype, assistants (Diplomat & Prophet), streak scoring, commentary |
-| 2 | 2–3 sprints | Mobile build, persistence, onboarding, audio, analytics |
-| 3 | 3–4 sprints | Expanded content set, meta progression, full stability ladder |
-| 4 | 3–4 sprints | Late-game systems, campaigns, social hooks |
-| 5 | Ongoing | Monetization, seasonal updates, accessibility/localization |
-
-This roadmap bridges the current proof-of-concept to the full Lazy God PRD, sequencing core systems, content, and infrastructure so each phase is playable and testable while unlocking long-term scalability.
+This ordering keeps the near-term focus on moment-to-moment fun and clarity for a single evaluator while leaving space for the ambitious long-term vision once the core loop earns its keep.
