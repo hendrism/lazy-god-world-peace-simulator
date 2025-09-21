@@ -1,0 +1,4 @@
+fastapi==0.110.0
+uvicorn==0.23.0
+pydantic==1.10.9
+dataclasses-json==0.6.3
