@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "nation.schema.json",
+  "type": "object",
+  "required": ["id", "name", "primary_race", "economy_type", "demeanor", "hidden_traits", "relations", "power", "population", "visibility"],
+  "properties": {
+    "id": { "type": "string" },
+    "name": { "type": "string", "minLength": 3, "maxLength": 40 },
+    "primary_race": { "type": "string" },
+    "economy_type": { "type": "string" },
+    "demeanor": { "type": "string" },
+    "hidden_traits": { "type": "array", "items": { "type": "string" } },
+    "revealed_traits": { "type": "array", "items": { "type": "string" } },
+    "relations": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "power": { "type": "number", "minimum": 0, "maximum": 1 },
+    "population": { "type": "integer", "minimum": 10000 },
+    "prosperity": { "type": "number", "minimum": 0, "maximum": 1 },
+    "unrest": { "type": "number", "minimum": 0, "maximum": 1 },
+    "visibility": { "type": "string" },
+    "last_interaction": { "type": "string" },
+    "tags": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

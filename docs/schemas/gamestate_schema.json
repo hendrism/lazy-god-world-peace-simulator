@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "gamestate.schema.json",
+  "type": "object",
+  "required": ["run_id", "turn", "stability", "stability_state", "score", "peace_streak", "chaos_streak", "nations", "assistants", "events_log", "world_theme", "run_status", "turn_limit"],
+  "properties": {
+    "run_id": { "type": "string" },
+    "turn": { "type": "integer", "minimum": 1 },
+    "stability": { "type": "number", "minimum": 0, "maximum": 1 },
+    "stability_state": { "type": "string" },
+    "score": { "type": "integer", "minimum": 0 },
+    "peace_streak": { "type": "integer", "minimum": 0 },
+    "chaos_streak": { "type": "integer", "minimum": 0 },
+    "nations": { "type": "array" },
+    "assistants": { "type": "array" },
+    "events_log": { "type": "array" },
+    "world_theme": { "type": "string" },
+    "run_status": { "type": "string" },
+    "turn_limit": { "type": "integer" },
+    "autosave_slot": { "type": "string" },
+    "created_at": { "type": "string" },
+    "ended_at": { "type": ["string", "null"] }
+  },
+  "additionalProperties": false
+}

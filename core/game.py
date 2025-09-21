@@ -10,8 +10,7 @@ from __future__ import annotations
 
 import random
 import uuid
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from .models import (
     Nation,
@@ -29,13 +28,8 @@ from .models import (
     EventResolution,
     GameState,
     StabilityState,
+    Decision,
 )
-
-
-class Decision(str, enum.Enum):
-    peace = "peace"
-    hostile = "hostile"
-    trade = "trade"
 
 
 class GameEngine:
@@ -178,7 +172,9 @@ class GameEngine:
     def get_state(self, run_id: str) -> Optional[GameState]:
         return self.active_runs.get(run_id)
 
-    def make_decision(self, run_id: str, event_id: str, choice_key: str) -> Tuple[Optional[GameState], Optional[str]]:
+    def make_decision(
+        self, run_id: str, event_id: str, choice_key: Union[str, Decision]
+    ) -> Tuple[Optional[GameState], Optional[str]]:
         """Resolve a decision for a given event and update game state.
 
         Returns a tuple (updated_state, error_message).  If error_message is not None,
@@ -197,7 +193,8 @@ class GameEngine:
         if event.resolved:
             return None, "EVENT_ALREADY_RESOLVED"
         # Validate choice
-        choice: Optional[EventChoice] = next((c for c in event.choices if c.key == choice_key), None)
+        choice_key_value = choice_key.value if isinstance(choice_key, Decision) else choice_key
+        choice: Optional[EventChoice] = next((c for c in event.choices if c.key == choice_key_value), None)
         if not choice:
             return None, "INVALID_CHOICE"
         # Apply effects
@@ -214,10 +211,10 @@ class GameEngine:
         state.stability = max(0.0, min(1.0, round(state.stability + stability_delta, 2)))
         state.score += score_delta
         # Update streaks
-        if choice_key == "peace":
+        if choice_key_value == Decision.peace.value:
             state.peace_streak += 1
             state.chaos_streak = 0
-        elif choice_key == "hostile":
+        elif choice_key_value == Decision.hostile.value:
             state.chaos_streak += 1
             state.peace_streak = 0
         else:
@@ -228,7 +225,7 @@ class GameEngine:
         # Mark event resolved
         event.resolved = True
         event.resolution = EventResolution(
-            chosen_key=choice_key,
+            chosen_key=choice_key_value,
             stability_delta=stability_delta,
             score_delta=score_delta,
             relation_changes=relation_changes,
@@ -260,3 +257,17 @@ class GameEngine:
         event = self._generate_event(state)
         state.events_log.append(event)
         return event, None
+
+    def end_run(self, run_id: str, reason: str) -> dict:
+        state = self.active_runs.get(run_id)
+        if not state:
+            return {"run_id": run_id, "reason": "RUN_NOT_FOUND", "final_score": 0}
+        state.run_status = reason
+        summary = {
+            "run_id": run_id,
+            "reason": reason,
+            "final_score": state.score,
+            "turns_played": state.turn,
+            "stability": state.stability,
+        }
+        return summary
