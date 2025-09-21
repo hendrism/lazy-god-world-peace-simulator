@@ -89,6 +89,29 @@ export interface GameState {
   stability_history: number[];
   revealed_traits: Record<string, string[]>;
   god_quips: string[];
+  assistant_notes: Record<string, string>;
+}
+
+export interface PlayerProfileSummary {
+  total_runs: number;
+  victories: number;
+  collapses: number;
+  highest_score: number;
+  best_stability: number;
+  rare_events_seen: string[];
+  unlocked_assistants: Record<string, boolean>;
+  last_run: {
+    run_id: string;
+    score: number;
+    stability: number;
+    stability_state: StabilityState;
+    turns: number;
+    result: RunStatus;
+    seed: number;
+    ended_at: string;
+    last_event?: string;
+  } | null;
+  last_unlocks: string[];
 }
 
 export interface StartRunResponse {
@@ -96,6 +119,7 @@ export interface StartRunResponse {
   session_id: string;
   state: GameState;
   pending_event: GameEvent | null;
+  profile_summary: PlayerProfileSummary;
 }
 
 export interface NextEventResponse {
@@ -111,4 +135,5 @@ export interface DecisionResponse {
   state: GameState;
   resolved_event: GameEvent;
   outcome_summary: string;
+  profile_summary?: PlayerProfileSummary;
 }

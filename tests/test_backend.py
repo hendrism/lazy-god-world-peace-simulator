@@ -1,7 +1,12 @@
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.append(str(ROOT))
+
+PROFILE_PATH = ROOT / "backend" / "player_profile.json"
+if PROFILE_PATH.exists():
+    PROFILE_PATH.unlink()
 
 from fastapi.testclient import TestClient
 
@@ -18,6 +23,9 @@ def test_start_and_get_state_flow():
     run_id = payload["run_id"]
     session_id = payload["session_id"]
     assert session_id
+    profile = payload["profile_summary"]
+    assert "total_runs" in profile
+    assert "unlocked_assistants" in profile
 
     state_resp = client.get(f"/runs/{run_id}/state")
     assert state_resp.status_code == 200
@@ -26,6 +34,7 @@ def test_start_and_get_state_flow():
     assert "score" in state
     assert "seed" in state
     assert "stability_history" in state
+    assert "assistant_notes" in state
 
 
 def test_next_and_decision_cycle():
@@ -49,3 +58,4 @@ def test_next_and_decision_cycle():
     assert outcome["session_id"] == session_id
     assert "state" in outcome
     assert "outcome_summary" in outcome
+    assert "profile_summary" in outcome

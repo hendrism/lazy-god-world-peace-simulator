@@ -41,6 +41,32 @@ GOD_QUIPS = {
     StabilityState.chaotic: "Fires everywhere. Some metaphorical, some disappointingly real.",
 }
 
+ASSISTANT_TRIGGER_QUIPS = {
+    "assistant_prophet": [
+        "Your prophet hums cosmic chords as secrets unfurl.",
+        "Visions ripple outward—apparently destiny smells like cardamom.",
+    ],
+    "assistant_diplomat": [
+        "The Diplomat already drafts thank-you notes for both sides.",
+        "Treaties flutter like confetti—clearly someone's networking hard.",
+    ],
+}
+
+RUN_END_QUIPS = {
+    "won": [
+        "Mortals declare an annual nap-day in your honour.",
+        "Peace lingers like a warm blanket—you may actually be good at this.",
+    ],
+    "collapsed": [
+        "The cosmos winces. Maybe bring extra snacks next time.",
+        "Chaos reigns and your couch privileges are revoked—for now.",
+    ],
+    "turn_limit": [
+        "Time runs out with mortals still mid-squabble—classic.",
+        "The clock sighs louder than the nations. Perhaps a rematch?",
+    ],
+}
+
 
 class GameEngine:
     """Encapsulates the game state and rules.
@@ -104,7 +130,7 @@ class GameEngine:
         joiner = " " if run_rng.random() > 0.5 else ""
         return prefix + joiner + suffix
 
-    def _generate_assistants(self) -> Dict[str, Assistant]:
+    def _generate_assistants(self, unlocked_flags: Optional[Dict[str, bool]] = None) -> Dict[str, Assistant]:
         """Return the baseline roster of assistants for a new run."""
 
         prophet = Assistant(
@@ -129,10 +155,53 @@ class GameEngine:
             cooldown=2,
             flavor_text="The Diplomat bides their time, ready to weave unshakable treaties.",
         )
+        unlocked_flags = unlocked_flags or {}
+        prophet.unlocked = unlocked_flags.get(prophet.id, True)
+        diplomat.unlocked = unlocked_flags.get(diplomat.id, diplomat.unlocked)
+        prophet.cooldown_remaining = 0
+        diplomat.cooldown_remaining = 0
         return {
             prophet.id: prophet,
             diplomat.id: diplomat,
         }
+
+    def _initial_assistant_notes(self, assistants: Dict[str, Assistant]) -> Dict[str, str]:
+        notes: Dict[str, str] = {}
+        for assistant in assistants.values():
+            if assistant.unlocked:
+                if assistant.cooldown_remaining > 0:
+                    turn_word = "turn" if assistant.cooldown_remaining == 1 else "turns"
+                    notes[assistant.id] = (
+                        f"{assistant.name} prepares quietly ({assistant.cooldown_remaining} {turn_word} remaining)."
+                    )
+                else:
+                    notes[assistant.id] = f"{assistant.name} is ready to intervene at your signal."
+            else:
+                if assistant.id == "assistant_diplomat":
+                    notes[assistant.id] = "Maintain a peace streak of five turns to invite The Diplomat."
+                else:
+                    notes[assistant.id] = f"{assistant.name} awaits an omen before joining the roster."
+        return notes
+
+    def _tick_assistants(self, state: GameState) -> Dict[str, str]:
+        notes: Dict[str, str] = {}
+        for assistant in state.assistants.values():
+            if not assistant.unlocked:
+                if assistant.id == "assistant_diplomat":
+                    notes[assistant.id] = "Maintain a peace streak of five turns to invite The Diplomat."
+                else:
+                    notes[assistant.id] = f"{assistant.name} watches from afar, awaiting your momentum."
+                continue
+            if assistant.cooldown_remaining > 0:
+                assistant.cooldown_remaining = max(0, assistant.cooldown_remaining - 1)
+            if assistant.cooldown_remaining > 0:
+                turn_word = "turn" if assistant.cooldown_remaining == 1 else "turns"
+                notes[assistant.id] = (
+                    f"{assistant.name} regroups between interventions ({assistant.cooldown_remaining} {turn_word} remaining)."
+                )
+            else:
+                notes[assistant.id] = f"{assistant.name} is ready to intervene."
+        return notes
 
     def start_run(
         self,
@@ -140,6 +209,7 @@ class GameEngine:
         turn_limit: int = 20,
         difficulty: str = "normal",
         seed: Optional[int] = None,
+        profile_unlocks: Optional[Dict[str, bool]] = None,
     ) -> GameState:
         """Initialize a new game run with a set of nations and assistants."""
         run_id = f"run_{uuid.uuid4().hex[:8]}"
@@ -152,7 +222,8 @@ class GameEngine:
         for archetype in archetypes:
             nation = self._generate_nation(run_id, archetype)
             nations[nation.id] = nation
-        assistants = self._generate_assistants()
+        assistants = self._generate_assistants(profile_unlocks)
+        assistant_notes = self._initial_assistant_notes(assistants)
         state = GameState(
             run_id=run_id,
             turn=1,
@@ -171,6 +242,7 @@ class GameEngine:
             stability_history=[0.5],
             revealed_traits={nid: [] for nid in nations},
             god_quips=[],
+            assistant_notes=assistant_notes,
         )
         self.active_runs[run_id] = state
         return state
@@ -191,7 +263,12 @@ class GameEngine:
         run_rng = self.run_rngs[state.run_id]
         # Choose two random nations for the event
         nation_ids = run_rng.sample(list(state.nations.keys()), k=2)
-        template = run_rng.choice(EVENT_TEMPLATES)
+        rare_templates = [template for template in EVENT_TEMPLATES if "rare" in template.tags]
+        common_templates = [template for template in EVENT_TEMPLATES if "rare" not in template.tags]
+        template_pool = common_templates if common_templates else EVENT_TEMPLATES
+        if rare_templates and run_rng.random() < 0.12:
+            template_pool = rare_templates
+        template = run_rng.choice(template_pool)
         name_a = state.nations[nation_ids[0]].name
         name_b = state.nations[nation_ids[1]].name
         summary = template.summary_template.format(a=name_a, b=name_b)
@@ -243,6 +320,8 @@ class GameEngine:
             return None, "EVENT_ID_MISMATCH"
         if event.resolved:
             return None, "EVENT_ALREADY_RESOLVED"
+        run_rng = self.run_rngs[state.run_id]
+        assistant_notes = self._tick_assistants(state)
         # Validate choice
         choice_key_value = choice_key.value if isinstance(choice_key, Decision) else choice_key
         choice: Optional[EventChoice] = next((c for c in event.choices if c.key == choice_key_value), None)
@@ -269,10 +348,12 @@ class GameEngine:
         if choice_key_value == Decision.peace.value:
             state.peace_streak += 1
             state.chaos_streak = 0
-            bonus_logs, bonus_delta = self._apply_diplomat_bonus(state)
+            bonus_logs, bonus_delta, diplomat_triggered = self._apply_diplomat_bonus(state, assistant_notes)
             if bonus_delta:
                 assistant_logs.extend(bonus_logs)
                 stability_delta = round(stability_delta + bonus_delta, 3)
+            if diplomat_triggered:
+                self._append_assistant_quip(state, "assistant_diplomat")
         elif choice_key_value == Decision.hostile.value:
             state.chaos_streak += 1
             state.peace_streak = 0
@@ -300,14 +381,18 @@ class GameEngine:
             state.god_quips.append(quip)
         # Prophet hint on positive stability swing
         hint: Optional[str] = None
-        if stability_delta > 0 and "assistant_prophet" in state.assistants:
-            hint = self._reveal_hidden_trait(state, event.nations)
+        prophet_logs: List[str] = []
+        hint, prophet_logs, prophet_triggered = self._maybe_trigger_prophet(state, event, stability_delta, assistant_notes)
+        if prophet_logs:
+            assistant_logs.extend(prophet_logs)
+        if prophet_triggered:
+            self._append_assistant_quip(state, "assistant_prophet")
         resolution_logs = [
             f"Decision {choice_key_value} applied. Stability change {stability_delta:+.2f}, score change {score_delta:+d}."
         ]
         if streak_logs:
             resolution_logs.extend(streak_logs)
-        unlock_logs = self._process_assistant_unlocks(state)
+        unlock_logs = self._process_assistant_unlocks(state, assistant_notes)
         if assistant_logs:
             resolution_logs.extend(assistant_logs)
         if unlock_logs:
@@ -316,6 +401,10 @@ class GameEngine:
             resolution_logs.append(f"God quip: {quip}")
         if hint:
             resolution_logs.append(hint)
+        if "rare" in event.tags:
+            rare_line = "Rare omen detected: this scenario seldom manifests."
+            resolution_logs.append(rare_line)
+            state.god_quips.append(rare_line)
         resolution_logs.append("Punchline: " + self._derive_punchline(event))
         # Mark event resolved
         event.resolved = True
@@ -332,7 +421,18 @@ class GameEngine:
         if state.stability <= 0.0:
             state.run_status = "collapsed"
         elif state.turn > state.turn_limit:
-            state.run_status = "turn_limit"
+            if state.stability >= 0.75:
+                state.run_status = "won"
+            elif state.stability <= 0.25:
+                state.run_status = "collapsed"
+            else:
+                state.run_status = "turn_limit"
+        if state.run_status != "active":
+            final_key = state.run_status if state.run_status in RUN_END_QUIPS else "turn_limit"
+            final_quip = run_rng.choice(RUN_END_QUIPS[final_key])
+            state.god_quips.append(final_quip)
+            resolution_logs.append(f"Final verdict: {final_quip}")
+        state.assistant_notes = assistant_notes
         return state, None
 
     def _derive_punchline(self, event: Event) -> str:
@@ -364,29 +464,84 @@ class GameEngine:
         readable_trait = trait.replace("_", " ")
         return f"Prophet reveals that {nation_name} hides the trait: {readable_trait}."
 
-    def _apply_diplomat_bonus(self, state: GameState) -> Tuple[List[str], float]:
+    def _apply_diplomat_bonus(self, state: GameState, assistant_notes: Dict[str, str]) -> Tuple[List[str], float, bool]:
         """Grant a stability bonus if the Diplomat assistant is unlocked."""
 
         diplomat = state.assistants.get("assistant_diplomat")
         if not diplomat or not diplomat.unlocked:
-            return [], 0.0
+            return [], 0.0, False
+        if diplomat.cooldown_remaining > 0:
+            turn_word = "turn" if diplomat.cooldown_remaining == 1 else "turns"
+            assistant_notes[diplomat.id] = (
+                f"{diplomat.name} refines negotiation scripts ({diplomat.cooldown_remaining} {turn_word} remaining)."
+            )
+            return [], 0.0, False
         bonus = round(diplomat.effect.magnitude, 3)
         previous = state.stability
         state.stability = min(1.0, round(state.stability + bonus, 3))
         actual = round(state.stability - previous, 3)
         if actual <= 0:
-            return [], 0.0
+            assistant_notes[diplomat.id] = f"{diplomat.name} is poised to assist."  # fallback note
+            return [], 0.0, False
+        diplomat.cooldown_remaining = diplomat.cooldown
+        turn_word = "turn" if diplomat.cooldown_remaining == 1 else "turns"
+        assistant_notes[diplomat.id] = f"{diplomat.name} brokered calm. Ready in {diplomat.cooldown} {turn_word}."
         log = f"{diplomat.name} smooths tensions. Stability change {actual:+.2f}."
-        return [log], actual
+        return [log], actual, True
 
-    def _process_assistant_unlocks(self, state: GameState) -> List[str]:
+    def _append_assistant_quip(self, state: GameState, assistant_id: str) -> None:
+        options = ASSISTANT_TRIGGER_QUIPS.get(assistant_id)
+        if not options:
+            return
+        run_rng = self.run_rngs[state.run_id]
+        state.god_quips.append(run_rng.choice(options))
+
+    def _maybe_trigger_prophet(
+        self,
+        state: GameState,
+        event: Event,
+        stability_delta: float,
+        assistant_notes: Dict[str, str],
+    ) -> Tuple[Optional[str], List[str], bool]:
+        prophet = state.assistants.get("assistant_prophet")
+        if not prophet or not prophet.unlocked:
+            return None, [], False
+        if stability_delta <= 0:
+            if prophet.cooldown_remaining > 0:
+                turn_word = "turn" if prophet.cooldown_remaining == 1 else "turns"
+                assistant_notes[prophet.id] = (
+                    f"{prophet.name} meditates on calmer tides ({prophet.cooldown_remaining} {turn_word} remaining)."
+                )
+            else:
+                assistant_notes[prophet.id] = f"{prophet.name} awaits a positive omen."
+            return None, [], False
+        if prophet.cooldown_remaining > 0:
+            turn_word = "turn" if prophet.cooldown_remaining == 1 else "turns"
+            assistant_notes[prophet.id] = (
+                f"{prophet.name} meditates on calmer tides ({prophet.cooldown_remaining} {turn_word} remaining)."
+            )
+            return None, [], False
+        hint = self._reveal_hidden_trait(state, event.nations)
+        if not hint:
+            assistant_notes[prophet.id] = f"{prophet.name} senses no fresh secrets."
+            return None, [], False
+        prophet.cooldown_remaining = prophet.cooldown
+        turn_word = "turn" if prophet.cooldown_remaining == 1 else "turns"
+        assistant_notes[prophet.id] = f"{prophet.name} shares a vision. Ready in {prophet.cooldown} {turn_word}."
+        log = "The Prophet shares a whispered vision of hidden motives."
+        return hint, [log], True
+
+    def _process_assistant_unlocks(self, state: GameState, assistant_notes: Dict[str, str]) -> List[str]:
         """Unlock assistants based on the current run state."""
 
         logs: List[str] = []
         diplomat = state.assistants.get("assistant_diplomat")
         if diplomat and not diplomat.unlocked and state.peace_streak >= 5:
             diplomat.unlocked = True
+            diplomat.cooldown_remaining = 0
             logs.append("Assistant unlocked: The Diplomat pledges to broker future truces.")
+            assistant_notes[diplomat.id] = "The Diplomat arrives eager to draft alliances."
+            self._append_assistant_quip(state, diplomat.id)
         return logs
 
     def next_turn(self, run_id: str) -> Tuple[Optional[Event], Optional[str]]:

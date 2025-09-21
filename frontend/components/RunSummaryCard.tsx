@@ -25,6 +25,7 @@ export default function RunSummaryCard({ summary, onReplaySeed, onOpenControls }
           stability: summary.finalStability,
           stability_state: summary.stabilityState,
           turns: summary.turns,
+          result: summary.result,
           peace_streak: summary.peaceStreak,
           chaos_streak: summary.chaosStreak,
           quips: summary.notableQuips,
@@ -38,6 +39,7 @@ export default function RunSummaryCard({ summary, onReplaySeed, onOpenControls }
   );
 
   const stabilityLabel = getStabilityLabel(summary.stabilityState);
+  const formattedResult = summary.result.replace(/_/g, ' ');
 
   const handleCopy = async () => {
     try {
@@ -61,6 +63,7 @@ export default function RunSummaryCard({ summary, onReplaySeed, onOpenControls }
           <p className="text-[0.65rem] uppercase tracking-[0.25em] text-white/50">Run Complete</p>
           <h2 className="mt-2 text-2xl font-semibold">World Status · {stabilityLabel}</h2>
           <p className="mt-1 text-sm text-white/70">Seed {summary.seed} · {summary.turns} turns resolved</p>
+          <p className="text-[0.6rem] uppercase tracking-[0.25em] text-white/40">Result · {formattedResult}</p>
         </div>
         <div className="flex flex-col items-end gap-2 text-right text-sm">
           <span className="rounded-full bg-accent-primary/20 px-3 py-1 font-semibold text-accent-primary">

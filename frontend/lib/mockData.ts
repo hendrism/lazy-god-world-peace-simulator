@@ -165,6 +165,9 @@ export function createMockSession(): MockSession {
     stability_history: [0.62],
     revealed_traits: Object.fromEntries(mockNations.map((nation) => [nation.id, []])),
     god_quips: [],
+    assistant_notes: {
+      assistant_prophet: 'The Prophet is ready to share fresh visions.',
+    },
   };
 
   const events: GameEvent[] = [
@@ -271,6 +274,7 @@ export function applyMockChoice(
       god_quips,
       turn: nextState.turn + 1,
       run_status,
+      assistant_notes: nextState.assistant_notes,
     },
     outcome,
   };
