@@ -211,6 +211,7 @@ class GameState:
     stability_history: List[float]
     revealed_traits: Dict[str, List[str]]
     god_quips: List[str]
+    assistant_notes: Dict[str, str]
 
     def to_dict(self) -> dict:
         return {
@@ -231,4 +232,5 @@ class GameState:
             "stability_history": self.stability_history,
             "revealed_traits": self.revealed_traits,
             "god_quips": self.god_quips,
+            "assistant_notes": self.assistant_notes,
         }

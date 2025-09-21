@@ -19,7 +19,8 @@
     "seed",
     "stability_history",
     "revealed_traits",
-    "god_quips"
+    "god_quips",
+    "assistant_notes"
   ],
   "properties": {
     "run_id": { "type": "string" },
@@ -56,7 +57,11 @@
         "items": { "type": "string" }
       }
     },
-    "god_quips": { "type": "array", "items": { "type": "string" } }
+    "god_quips": { "type": "array", "items": { "type": "string" } },
+    "assistant_notes": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    }
   },
   "additionalProperties": false
 }

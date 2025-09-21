@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
+import type { PlayerProfileSummary } from '@/types/game';
+
 interface OnboardingOverlayProps {
   open: boolean;
   onClose: () => void;
@@ -11,6 +13,7 @@ interface OnboardingOverlayProps {
   sessionId: string | null;
   activeSeed: number | null;
   mode: 'live' | 'mock';
+  profileSummary: PlayerProfileSummary | null;
 }
 
 const INTRO_STEPS = [
@@ -27,6 +30,7 @@ export default function OnboardingOverlay({
   sessionId,
   activeSeed,
   mode,
+  profileSummary,
 }: OnboardingOverlayProps) {
   const [seedInput, setSeedInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -114,6 +118,69 @@ export default function OnboardingOverlay({
                 <span>Active Seed · {activeSeed ?? 'random'}</span>
               </div>
             </div>
+
+            {profileSummary && (
+              <div className="mt-4 rounded-2xl border border-white/10 bg-night-900/70 px-4 py-4 text-xs text-white/70">
+                <p className="text-[0.6rem] uppercase tracking-[0.25em] text-white/40">Progression Snapshot</p>
+                <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl bg-white/5 px-3 py-2">
+                    <p className="text-[0.55rem] uppercase tracking-[0.25em] text-white/40">Runs Logged</p>
+                    <p className="mt-1 text-sm font-semibold text-accent-primary">
+                      {profileSummary.total_runs} total · {profileSummary.victories} victories
+                    </p>
+                    <p className="text-[0.6rem] text-white/50">Collapses {profileSummary.collapses}</p>
+                  </div>
+                  <div className="rounded-xl bg-white/5 px-3 py-2">
+                    <p className="text-[0.55rem] uppercase tracking-[0.25em] text-white/40">Personal Best</p>
+                    <p className="mt-1 text-sm font-semibold text-accent-secondary">
+                      Score {profileSummary.highest_score.toLocaleString()}
+                    </p>
+                    <p className="text-[0.6rem] text-white/50">
+                      Stability {(profileSummary.best_stability * 100).toFixed(0)}%
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-col gap-2">
+                  <div className="rounded-xl bg-white/5 px-3 py-2">
+                    <p className="text-[0.55rem] uppercase tracking-[0.25em] text-white/40">Unlocked Assistants</p>
+                    <p className="mt-1 text-sm text-white/80">
+                      {Object.entries(profileSummary.unlocked_assistants)
+                        .filter(([, unlocked]) => unlocked)
+                        .map(([key]) =>
+                          key
+                            .replace('assistant_', '')
+                            .split('_')
+                            .map((part) => part[0]?.toUpperCase() + part.slice(1))
+                            .join(' '),
+                        )
+                        .join(' · ') || 'Prophet only — recruit more through play!'}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-white/5 px-3 py-2">
+                    <p className="text-[0.55rem] uppercase tracking-[0.25em] text-white/40">Rare Events Logged</p>
+                    <p className="mt-1 text-sm text-white/80">
+                      {profileSummary.rare_events_seen.length} discovered
+                      {profileSummary.rare_events_seen.length > 0 &&
+                        ` · Latest ${profileSummary.rare_events_seen.slice(-1)[0].replace(/_/g, ' ')}`}
+                    </p>
+                  </div>
+                  {profileSummary.last_unlocks.length > 0 && (
+                    <div className="rounded-xl bg-white/5 px-3 py-2">
+                      <p className="text-[0.55rem] uppercase tracking-[0.25em] text-white/40">Recent Unlocks</p>
+                      <p className="mt-1 text-sm text-white/80">
+                        {profileSummary.last_unlocks.join(' · ')}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {profileSummary.last_run && (
+                  <p className="mt-3 text-[0.6rem] uppercase tracking-[0.2em] text-white/40">
+                    Last Run · {profileSummary.last_run.result.replace(/_/g, ' ')} · Score{' '}
+                    {profileSummary.last_run.score.toLocaleString()}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="mt-6 space-y-4">
               <div>

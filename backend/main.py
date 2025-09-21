@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 
 from core.game import GameEngine
 from core.models import Decision
+from .profile_store import PROFILE_STORE
 
 
 app = FastAPI(title="Lazy God API", version="0.2.0", description="Proof of concept for Lazy God game")
@@ -93,6 +94,7 @@ class StartRunResponse(BaseModel):
     session_id: str
     state: dict
     pending_event: Optional[dict]
+    profile_summary: dict
 
 
 @app.post("/runs/start", response_model=StartRunResponse)
@@ -109,6 +111,7 @@ async def start_run(payload: StartRunRequest):
                     session_id=session_id,
                     state=_serialize_state(existing_state),
                     pending_event=_pending_event_for_state(existing_state),
+                    profile_summary=PROFILE_STORE.get_summary(),
                 )
 
     state = engine.start_run(
@@ -116,6 +119,7 @@ async def start_run(payload: StartRunRequest):
         turn_limit=payload.turn_limit,
         difficulty=payload.difficulty,
         seed=payload.seed,
+        profile_unlocks=PROFILE_STORE.unlocked_flags(),
     )
 
     if session_id:
@@ -128,6 +132,7 @@ async def start_run(payload: StartRunRequest):
         session_id=session_id,
         state=_serialize_state(state),
         pending_event=_pending_event_for_state(state),
+        profile_summary=PROFILE_STORE.get_summary(),
     )
 
 
@@ -183,6 +188,7 @@ class DecisionResponse(BaseModel):
     state: dict
     resolved_event: dict
     outcome_summary: str
+    profile_summary: Optional[dict]
 
 
 @app.post("/runs/{run_id}/decision", response_model=DecisionResponse)
@@ -210,6 +216,7 @@ async def decision(run_id: str, payload: DecisionRequest):
         state=_serialize_state(state),
         resolved_event=_serialize_event(event),
         outcome_summary=summary,
+        profile_summary=PROFILE_STORE.ingest_resolution(state, event),
     )
 
 

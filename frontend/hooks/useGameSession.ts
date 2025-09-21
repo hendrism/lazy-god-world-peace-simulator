@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { fetchNextEvent, startRun, submitDecision } from '@/lib/api';
 import { applyMockChoice, createMockSession } from '@/lib/mockData';
-import type { DecisionKey, GameEvent, GameState } from '@/types/game';
+import type { DecisionKey, GameEvent, GameState, PlayerProfileSummary } from '@/types/game';
 
 const SESSION_STORAGE_KEY = 'lazy-god-session-id';
 
@@ -15,6 +15,7 @@ export interface RunSummary {
   finalStability: number;
   stabilityState: GameState['stability_state'];
   turns: number;
+  result: GameState['run_status'];
   peaceStreak: number;
   chaosStreak: number;
   notableQuips: string[];
@@ -38,6 +39,7 @@ interface UseGameSessionResult {
   outcomeSummary: string | null;
   lastRunSummary: RunSummary | null;
   mode: 'live' | 'mock';
+  profileSummary: PlayerProfileSummary | null;
   restartSession: (options?: RestartOptions) => Promise<void>;
   choose: (choice: DecisionKey) => Promise<void>;
   clearError: () => void;
@@ -54,6 +56,7 @@ export function useGameSession(): UseGameSessionResult {
   const [outcomeSummary, setOutcomeSummary] = useState<string | null>(null);
   const [lastRunSummary, setLastRunSummary] = useState<RunSummary | null>(null);
   const [mode, setMode] = useState<'live' | 'mock'>('live');
+  const [profileSummary, setProfileSummary] = useState<PlayerProfileSummary | null>(null);
   const [hasLoadedSessionId, setHasLoadedSessionId] = useState(false);
   const mockSessionRef = useRef(createMockSession());
   const mockEventsIndex = useRef(0);
@@ -89,6 +92,17 @@ export function useGameSession(): UseGameSessionResult {
     setMode('mock');
     setIsLoading(false);
     setIsProcessing(false);
+    setProfileSummary({
+      total_runs: 0,
+      victories: 0,
+      collapses: 0,
+      highest_score: 0,
+      best_stability: 0,
+      rare_events_seen: [],
+      unlocked_assistants: { assistant_prophet: true },
+      last_run: null,
+      last_unlocks: [],
+    });
   }, []);
 
   const captureSummary = useCallback((resolvedState: GameState, resolvedEvent: GameEvent | null) => {
@@ -99,6 +113,7 @@ export function useGameSession(): UseGameSessionResult {
       finalStability: resolvedState.stability,
       stabilityState: resolvedState.stability_state,
       turns: resolvedState.turn,
+      result: resolvedState.run_status,
       peaceStreak: resolvedState.peace_streak,
       chaosStreak: resolvedState.chaos_streak,
       notableQuips: resolvedState.god_quips.slice(-3),
@@ -131,6 +146,7 @@ export function useGameSession(): UseGameSessionResult {
         setState(start.state);
         setMode('live');
         setLastRunSummary(null);
+        setProfileSummary(start.profile_summary);
 
         if (start.pending_event) {
           setCurrentEvent(start.pending_event);
@@ -200,6 +216,9 @@ export function useGameSession(): UseGameSessionResult {
         }
         setState(response.state);
         setOutcomeSummary(response.outcome_summary);
+        if (response.profile_summary) {
+          setProfileSummary(response.profile_summary);
+        }
         if (response.state.run_status !== 'active') {
           setCurrentEvent(null);
           captureSummary(response.state, response.resolved_event);
@@ -246,6 +265,7 @@ export function useGameSession(): UseGameSessionResult {
       outcomeSummary,
       lastRunSummary,
       mode,
+      profileSummary,
       restartSession,
       choose,
       clearError,
@@ -260,6 +280,7 @@ export function useGameSession(): UseGameSessionResult {
       lastRunSummary,
       mode,
       outcomeSummary,
+      profileSummary,
       restartSession,
       runId,
       sessionId,

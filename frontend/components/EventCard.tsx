@@ -3,11 +3,13 @@
 import { motion } from 'framer-motion';
 
 import { formatPopulation, getRaceEmoji } from '@/lib/formatters';
-import type { GameEvent, GameNation } from '@/types/game';
+import type { GameAssistant, GameEvent, GameNation } from '@/types/game';
 
 interface EventCardProps {
   event: GameEvent;
   nations: Record<string, GameNation>;
+  assistants: Record<string, GameAssistant>;
+  assistantNotes: Record<string, string>;
   isProcessing: boolean;
 }
 
@@ -31,8 +33,12 @@ function NationPanel({ nation }: { nation: GameNation }) {
   );
 }
 
-export default function EventCard({ event, nations, isProcessing }: EventCardProps) {
+export default function EventCard({ event, nations, assistants, assistantNotes, isProcessing }: EventCardProps) {
   const [firstNation, secondNation] = event.nations.map((id) => nations[id]).filter(Boolean);
+  const isRare = event.tags?.includes('rare') ?? false;
+  const influencingAssistants = (event.assistant_influence ?? [])
+    .map((assistantId) => assistants[assistantId])
+    .filter((value): value is GameAssistant => Boolean(value));
 
   return (
     <motion.section
@@ -49,6 +55,11 @@ export default function EventCard({ event, nations, isProcessing }: EventCardPro
         <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[0.65rem] uppercase tracking-[0.25em] text-white/60">
           {event.kind}
         </span>
+        {isRare && (
+          <span className="rounded-full border border-accent-primary/50 bg-accent-primary/20 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.25em] text-accent-primary">
+            Rare Alignment
+          </span>
+        )}
       </div>
       <h2 className="mt-3 break-words text-lg font-semibold leading-snug text-white/90">{event.summary}</h2>
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -60,8 +71,22 @@ export default function EventCard({ event, nations, isProcessing }: EventCardPro
         <p className="mt-1 leading-relaxed">
           {isProcessing
             ? 'Intervention in progress… interpreting the ripples across the astral sea.'
-            : 'Choose how to guide these nations. Your influence will echo across prosperity and conflict.'}
+            : isRare
+              ? 'A rare cosmic configuration magnifies the consequences. Choose with care.'
+              : 'Choose how to guide these nations. Your influence will echo across prosperity and conflict.'}
         </p>
+        {influencingAssistants.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2 text-[0.65rem] text-white/60">
+            {influencingAssistants.map((assistant) => (
+              <span
+                key={assistant.id}
+                className="rounded-full border border-white/15 bg-white/5 px-3 py-1"
+              >
+                {assistant.name} · {assistantNotes[assistant.id] ?? 'Watching closely'}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </motion.section>
   );

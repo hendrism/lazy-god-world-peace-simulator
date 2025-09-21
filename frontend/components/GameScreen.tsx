@@ -28,6 +28,7 @@ export default function GameScreen() {
     sessionId,
     lastRunSummary,
     clearError,
+    profileSummary,
   } = useGameSession();
   const [controlsOpen, setControlsOpen] = useState(false);
   const [introChecked, setIntroChecked] = useState(false);
@@ -119,7 +120,14 @@ export default function GameScreen() {
 
       <AnimatePresence mode="wait">
         {currentEvent && !runEnded ? (
-          <EventCard key={currentEvent.id} event={currentEvent} nations={state.nations} isProcessing={isProcessing} />
+          <EventCard
+            key={currentEvent.id}
+            event={currentEvent}
+            nations={state.nations}
+            assistants={state.assistants}
+            assistantNotes={state.assistant_notes}
+            isProcessing={isProcessing}
+          />
         ) : (
           <RunSummaryCard
             key="run-complete"
@@ -132,6 +140,7 @@ export default function GameScreen() {
                 score: state.score,
                 finalStability: state.stability,
                 stabilityState: state.stability_state,
+                result: state.run_status,
                 turns: state.turn,
                 peaceStreak: state.peace_streak,
                 chaosStreak: state.chaos_streak,
@@ -175,6 +184,7 @@ export default function GameScreen() {
         sessionId={sessionId}
         activeSeed={activeSeed}
         mode={mode}
+        profileSummary={profileSummary}
       />
     </div>
   );

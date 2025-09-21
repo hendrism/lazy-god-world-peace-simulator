@@ -19,6 +19,7 @@ def test_run_generates_event_and_updates_state():
     assert state.assistants["assistant_prophet"].unlocked is True
     assert "assistant_diplomat" in state.assistants
     assert state.assistants["assistant_diplomat"].unlocked is False
+    assert "assistant_prophet" in state.assistant_notes
 
     event, error = engine.next_turn(run_id)
     assert error is None
@@ -34,6 +35,7 @@ def test_run_generates_event_and_updates_state():
     assert updated_state.stability_history[-1] == updated_state.stability
     assert updated_state.events_log[-1].resolution is not None
     assert any(log.startswith("Punchline") for log in updated_state.events_log[-1].resolution.logs)
+    assert "assistant_prophet" in updated_state.assistant_notes
 
 
 def test_stability_transitions_cover_thresholds():
@@ -102,14 +104,21 @@ def test_diplomat_unlocks_and_grants_bonus():
 
     diplomat = state.assistants["assistant_diplomat"]
     assert diplomat.unlocked is True
+    assert diplomat.cooldown_remaining == 0
     assert last_event is not None
-    peace_choice = next(c for c in last_event.choices if c.key == "peace")
-    base_delta = sum(
-        effect.delta
-        for effect in peace_choice.effects
-        if effect.target == "global" and effect.attribute == "stability"
-    )
     resolution = state.events_log[-1].resolution
     assert resolution is not None
-    assert resolution.stability_delta >= base_delta
-    assert any("Diplomat" in log for log in resolution.logs)
+    assert any("Assistant unlocked" in log for log in resolution.logs)
+
+    # The next peace decision should trigger the diplomat bonus.
+    event, _ = engine.next_turn(run_id)
+    assert event is not None
+    state, error = engine.make_decision(run_id, event.id, Decision.peace)
+    assert error is None
+    assert state is not None
+    resolution = state.events_log[-1].resolution
+    assert resolution is not None
+    assert any("smooths tensions" in log for log in resolution.logs)
+    diplomat = state.assistants["assistant_diplomat"]
+    assert diplomat.cooldown_remaining == diplomat.cooldown
+    assert "Diplomat" in state.assistant_notes["assistant_diplomat"]

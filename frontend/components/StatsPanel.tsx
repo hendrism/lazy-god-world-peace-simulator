@@ -9,18 +9,42 @@ interface StatsPanelProps {
   state: GameState;
 }
 
-function AssistantBadge({ assistant }: { assistant: GameAssistant }) {
+interface AssistantBadgeProps {
+  assistant: GameAssistant;
+  note?: string;
+}
+
+function AssistantBadge({ assistant, note }: AssistantBadgeProps) {
+  const unlocked = assistant.unlocked;
+  let statusLabel = 'Ready';
+  let statusClass = 'bg-accent-primary/20 text-accent-primary';
+  if (!unlocked) {
+    statusLabel = 'Locked';
+    statusClass = 'bg-white/10 text-white/60';
+  } else if (assistant.cooldown_remaining > 0) {
+    statusLabel = `Cooldown ${assistant.cooldown_remaining}`;
+    statusClass = 'bg-white/10 text-white/70';
+  }
+
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+    <div
+      className={`flex min-w-0 items-center gap-3 rounded-2xl border border-white/10 px-4 py-3 ${
+        unlocked ? 'bg-white/5' : 'bg-night-900/40'
+      }`}
+    >
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-night-900/70 text-xl">
         🔮
       </div>
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-white/90">{assistant.name}</p>
-        <p className="truncate text-xs text-white/60">{assistant.flavor_text || `${assistant.clazz} · Lv ${assistant.level}`}</p>
+        <p className="truncate text-xs text-white/60">
+          {note || assistant.flavor_text || `${assistant.clazz} · Lv ${assistant.level}`}
+        </p>
       </div>
-      <span className="ml-auto rounded-full bg-accent-primary/20 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-accent-primary">
-        Ready
+      <span
+        className={`ml-auto rounded-full px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.2em] ${statusClass}`}
+      >
+        {statusLabel}
       </span>
     </div>
   );
@@ -28,6 +52,7 @@ function AssistantBadge({ assistant }: { assistant: GameAssistant }) {
 
 export default function StatsPanel({ state }: StatsPanelProps) {
   const assistants = Object.values(state.assistants);
+  const assistantNotes = state.assistant_notes ?? {};
   const trendingNations = Object.values(state.nations)
     .sort((a, b) => b.prosperity - a.prosperity)
     .slice(0, 3);
@@ -57,7 +82,7 @@ export default function StatsPanel({ state }: StatsPanelProps) {
           <p className="text-[0.6rem] uppercase tracking-[0.25em] text-white/50">Trusted Assistants</p>
           <div className="mt-2 space-y-2">
             {assistants.map((assistant) => (
-              <AssistantBadge key={assistant.id} assistant={assistant} />
+              <AssistantBadge key={assistant.id} assistant={assistant} note={assistantNotes[assistant.id]} />
             ))}
             {assistants.length === 0 && (
               <p className="rounded-2xl border border-dashed border-white/10 bg-night-900/50 px-4 py-6 text-center text-[0.7rem] text-white/50">
