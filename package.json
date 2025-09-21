@@ -1,0 +1,16 @@
+{
+  "name": "lazy-god-world-peace-simulator",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "npm run --workspace frontend dev",
+    "build": "npm run --workspace frontend build",
+    "start": "npm run --workspace frontend start",
+    "lint": "npm run --workspace frontend lint"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
