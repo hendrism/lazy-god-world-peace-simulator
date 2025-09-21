@@ -15,6 +15,10 @@ def test_run_generates_event_and_updates_state():
     assert len(state.nations) >= 8
     assert all(n.archetype for n in state.nations.values())
     assert state.seed == 123
+    assert "assistant_prophet" in state.assistants
+    assert state.assistants["assistant_prophet"].unlocked is True
+    assert "assistant_diplomat" in state.assistants
+    assert state.assistants["assistant_diplomat"].unlocked is False
 
     event, error = engine.next_turn(run_id)
     assert error is None
@@ -71,3 +75,41 @@ def test_peace_streak_triggers_trait_reveal():
     assert any(traits for traits in state.revealed_traits.values())
     assert state.peace_streak >= 3 or state.chaos_streak == 0
     assert state.god_quips
+
+
+def test_diplomat_unlocks_and_grants_bonus():
+    engine = GameEngine(seed=21)
+    state = engine.start_run(seed=21)
+    run_id = state.run_id
+
+    # Apply a hostile decision to keep stability from reaching the cap later.
+    event, _ = engine.next_turn(run_id)
+    assert event is not None
+    state, error = engine.make_decision(run_id, event.id, Decision.hostile)
+    assert error is None
+    assert state is not None
+    assert state.assistants["assistant_diplomat"].unlocked is False
+
+    # Chain peace decisions to unlock the diplomat.
+    last_event = None
+    for _ in range(5):
+        event, _ = engine.next_turn(run_id)
+        assert event is not None
+        last_event = event
+        state, error = engine.make_decision(run_id, event.id, Decision.peace)
+        assert error is None
+        assert state is not None
+
+    diplomat = state.assistants["assistant_diplomat"]
+    assert diplomat.unlocked is True
+    assert last_event is not None
+    peace_choice = next(c for c in last_event.choices if c.key == "peace")
+    base_delta = sum(
+        effect.delta
+        for effect in peace_choice.effects
+        if effect.target == "global" and effect.attribute == "stability"
+    )
+    resolution = state.events_log[-1].resolution
+    assert resolution is not None
+    assert resolution.stability_delta >= base_delta
+    assert any("Diplomat" in log for log in resolution.logs)

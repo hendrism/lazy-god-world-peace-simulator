@@ -38,9 +38,9 @@ Deliver a self-contained build that one person can play end-to-end to evaluate t
 **Exit Criteria**: ✅ A single user can launch the web client locally, play a 5–10 minute session without crashes, and understand outcomes through UI feedback.
 
 ## Milestone 2 – Meta Progression Taste Test (1 sprint)
-1. **Assistant System**
-   - Implement Prophet (baseline) and Diplomat with simple unlock logic (e.g., reach streak of 5).
-   - Surface assistant hints and cooldowns in the UI.
+1. **Assistant System** – *in progress*
+   - ✅ Implement Prophet (baseline) alongside a Diplomat who unlocks after a peace streak of five and grants a stability bonus.
+   - ⏭️ Surface assistant hints and cooldowns in the UI.
 2. **Persistent Profile (Local)**
    - Store unlock flags and high scores in a JSON/SQLite file on the backend.
    - Display progression summary when starting a new run.

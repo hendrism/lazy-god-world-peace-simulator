@@ -104,9 +104,10 @@ class GameEngine:
         joiner = " " if run_rng.random() > 0.5 else ""
         return prefix + joiner + suffix
 
-    def _generate_assistant(self) -> Assistant:
-        # For now, return a Prophet assistant at level 1
-        return Assistant(
+    def _generate_assistants(self) -> Dict[str, Assistant]:
+        """Return the baseline roster of assistants for a new run."""
+
+        prophet = Assistant(
             id="assistant_prophet",
             name="The Prophet",
             clazz=AssistantClass.prophet,
@@ -117,6 +118,21 @@ class GameEngine:
             cooldown=3,
             flavor_text="The Prophet whispers of coming storms.",
         )
+        diplomat = Assistant(
+            id="assistant_diplomat",
+            name="The Diplomat",
+            clazz=AssistantClass.diplomat,
+            rarity="epic",
+            unlocked=False,
+            level=1,
+            effect=AssistantEffect(type="stability_boost", magnitude=0.05),
+            cooldown=2,
+            flavor_text="The Diplomat bides their time, ready to weave unshakable treaties.",
+        )
+        return {
+            prophet.id: prophet,
+            diplomat.id: diplomat,
+        }
 
     def start_run(
         self,
@@ -136,8 +152,7 @@ class GameEngine:
         for archetype in archetypes:
             nation = self._generate_nation(run_id, archetype)
             nations[nation.id] = nation
-        # A single unlocked assistant
-        assistants = {"assistant_prophet": self._generate_assistant()}
+        assistants = self._generate_assistants()
         state = GameState(
             run_id=run_id,
             turn=1,
@@ -181,6 +196,9 @@ class GameEngine:
         name_b = state.nations[nation_ids[1]].name
         summary = template.summary_template.format(a=name_a, b=name_b)
         choices = self._build_choices_from_template(template)
+        assistant_ids = [
+            aid for aid, assistant in state.assistants.items() if assistant.unlocked
+        ]
         event = Event(
             id=f"event_{run_rng.getrandbits(32):08x}",
             kind=template.kind,
@@ -190,7 +208,7 @@ class GameEngine:
             choices=choices,
             template_key=template.key,
             tags=list(template.tags),
-            assistant_influence=list(state.assistants.keys()),
+            assistant_influence=assistant_ids,
             rng_seed=run_rng.randint(0, 10_000),
         )
         return event
@@ -241,13 +259,20 @@ class GameEngine:
             elif effect.target == "score" and effect.attribute == "points":
                 score_delta += int(effect.delta)
         previous_stability_state = state.stability_state
+        assistant_logs: List[str] = []
         # Update stability and compute new state
-        state.stability = max(0.0, min(1.0, round(state.stability + stability_delta, 3)))
+        new_stability = max(0.0, min(1.0, round(state.stability + stability_delta, 3)))
+        stability_delta = round(new_stability - state.stability, 3)
+        state.stability = new_stability
         state.score += score_delta
         # Update streaks
         if choice_key_value == Decision.peace.value:
             state.peace_streak += 1
             state.chaos_streak = 0
+            bonus_logs, bonus_delta = self._apply_diplomat_bonus(state)
+            if bonus_delta:
+                assistant_logs.extend(bonus_logs)
+                stability_delta = round(stability_delta + bonus_delta, 3)
         elif choice_key_value == Decision.hostile.value:
             state.chaos_streak += 1
             state.peace_streak = 0
@@ -282,6 +307,11 @@ class GameEngine:
         ]
         if streak_logs:
             resolution_logs.extend(streak_logs)
+        unlock_logs = self._process_assistant_unlocks(state)
+        if assistant_logs:
+            resolution_logs.extend(assistant_logs)
+        if unlock_logs:
+            resolution_logs.extend(unlock_logs)
         if quip:
             resolution_logs.append(f"God quip: {quip}")
         if hint:
@@ -333,6 +363,31 @@ class GameEngine:
         nation_name = state.nations[nid].name
         readable_trait = trait.replace("_", " ")
         return f"Prophet reveals that {nation_name} hides the trait: {readable_trait}."
+
+    def _apply_diplomat_bonus(self, state: GameState) -> Tuple[List[str], float]:
+        """Grant a stability bonus if the Diplomat assistant is unlocked."""
+
+        diplomat = state.assistants.get("assistant_diplomat")
+        if not diplomat or not diplomat.unlocked:
+            return [], 0.0
+        bonus = round(diplomat.effect.magnitude, 3)
+        previous = state.stability
+        state.stability = min(1.0, round(state.stability + bonus, 3))
+        actual = round(state.stability - previous, 3)
+        if actual <= 0:
+            return [], 0.0
+        log = f"{diplomat.name} smooths tensions. Stability change {actual:+.2f}."
+        return [log], actual
+
+    def _process_assistant_unlocks(self, state: GameState) -> List[str]:
+        """Unlock assistants based on the current run state."""
+
+        logs: List[str] = []
+        diplomat = state.assistants.get("assistant_diplomat")
+        if diplomat and not diplomat.unlocked and state.peace_streak >= 5:
+            diplomat.unlocked = True
+            logs.append("Assistant unlocked: The Diplomat pledges to broker future truces.")
+        return logs
 
     def next_turn(self, run_id: str) -> Tuple[Optional[Event], Optional[str]]:
         """Advance the run by generating a new event if possible.
