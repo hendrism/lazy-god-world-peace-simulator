@@ -29,6 +29,7 @@ class StartRunRequest(BaseModel):
     world_theme: str = "classic_fantasy"
     turn_limit: int = 20
     difficulty: str = "normal"
+    seed: int | None = None
 
 
 class StartRunResponse(BaseModel):
@@ -39,7 +40,10 @@ class StartRunResponse(BaseModel):
 @app.post("/runs/start", response_model=StartRunResponse)
 async def start_run(payload: StartRunRequest):
     state = engine.start_run(
-        world_theme=payload.world_theme, turn_limit=payload.turn_limit, difficulty=payload.difficulty
+        world_theme=payload.world_theme,
+        turn_limit=payload.turn_limit,
+        difficulty=payload.difficulty,
+        seed=payload.seed,
     )
     return StartRunResponse(run_id=state.run_id, state=state.to_dict())
 

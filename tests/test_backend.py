@@ -22,6 +22,8 @@ def test_start_and_get_state_flow():
     state = state_resp.json()["state"]
     assert "stability" in state
     assert "score" in state
+    assert "seed" in state
+    assert "stability_history" in state
 
 
 def test_next_and_decision_cycle():
@@ -31,6 +33,8 @@ def test_next_and_decision_cycle():
     next_resp = client.post(f"/runs/{run_id}/next")
     assert next_resp.status_code == 200
     event = next_resp.json()["event"]
+    assert event["template_key"]
+    assert "tags" in event
 
     decision_body = {"event_id": event["id"], "choice": "peace"}
     decision_resp = client.post(f"/runs/{run_id}/decision", json=decision_body)

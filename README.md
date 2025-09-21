@@ -28,36 +28,47 @@ lazy-god-game/
 
 ### Running the CLI Prototype
 
-The command‑line game allows you to experience a short play session directly in your terminal.  To run it:
+The command-line slice now mirrors the strengthened turn loop from the development plan. It supports deterministic seeding, curated nation archetypes, and authored event punchlines.
 
 ```bash
-cd lazy-god-game
-python3 -m venv venv && source venv/bin/activate  # optional: create a virtual environment
+python3 -m venv .venv && source .venv/bin/activate  # optional: create a virtual environment
 pip install -r backend/requirements.txt
-python prototype/cli_game.py
+python prototype/cli_game.py 1337  # optional seed for deterministic runs
 ```
 
-The CLI will generate two nations per turn and present you with three options: **peace**, **hostile** or **trade**.  Decisions affect world stability and your score.  The game ends when either the stability falls below zero or you reach the turn limit.
+During play you will see:
+
+- A stability meter with the five named states (chaotic → golden_age).
+- Eight themed nations per run, each with hidden traits the Prophet can reveal.
+- Authored event summaries with unique punchlines and streak-based bonuses.
 
 ### Running the API Server
 
-This prototype includes a minimal REST API implemented with **FastAPI**.  To launch the server:
+Launch the FastAPI service to drive the same engine over HTTP:
 
 ```bash
-cd lazy-god-game
 pip install -r backend/requirements.txt
 uvicorn backend.main:app --reload
 ```
 
-The API exposes endpoints such as:
+Key endpoints:
 
-| Method | Path              | Description                  |
-|------:|-------------------|------------------------------|
-| `POST` | `/run/start`      | Start a new run              |
-| `POST` | `/run/decision`   | Submit a player decision     |
-| `GET`  | `/run/state/{id}` | Fetch the current game state |
+| Method | Path | Description |
+|------:|------|-------------|
+| `POST` | `/runs/start` | Start a new run. Optional body keys: `world_theme`, `turn_limit`, `difficulty`, `seed`. |
+| `POST` | `/runs/{run_id}/next` | Generate the next event in the active run. |
+| `POST` | `/runs/{run_id}/decision` | Resolve the pending event with a decision payload (`event_id`, `choice`). |
+| `GET` | `/runs/{run_id}/state` | Inspect the full game state, including revealed traits and god quips. |
 
-Use a tool like [HTTPie](https://httpie.io/) or curl to interact with the service.
+Example HTTPie session:
+
+```bash
+http POST :8000/runs/start seed:=2024
+http POST :8000/runs/<run_id>/next
+http POST :8000/runs/<run_id>/decision event_id=<event_id> choice=peace
+```
+
+All API responses conform to the JSON schemas in `docs/schemas/` and expose the deterministic seed, stability history, revealed traits, and authored quips to consumers.
 
 ### Next Steps
 

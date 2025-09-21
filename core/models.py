@@ -67,6 +67,7 @@ RelationStatus = str  # neutral, allied, hostile, trading, etc.
 class Nation:
     id: str
     name: str
+    archetype: str
     primary_race: Race
     economy_type: EconomyType
     demeanor: Demeanor
@@ -158,6 +159,8 @@ class Event:
     nations: List[str]
     summary: str
     choices: List[EventChoice]
+    template_key: str = ""
+    tags: List[str] = field(default_factory=list)
     assistant_influence: List[str] = field(default_factory=list)
     resolved: bool = False
     resolution: Optional[EventResolution] = None
@@ -204,6 +207,10 @@ class GameState:
     world_theme: str
     run_status: str  # active, won, collapsed, turn_limit
     turn_limit: int
+    seed: int
+    stability_history: List[float]
+    revealed_traits: Dict[str, List[str]]
+    god_quips: List[str]
 
     def to_dict(self) -> dict:
         return {
@@ -220,4 +227,8 @@ class GameState:
             "world_theme": self.world_theme,
             "run_status": self.run_status,
             "turn_limit": self.turn_limit,
+            "seed": self.seed,
+            "stability_history": self.stability_history,
+            "revealed_traits": self.revealed_traits,
+            "god_quips": self.god_quips,
         }

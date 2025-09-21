@@ -2,13 +2,15 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "event.schema.json",
   "type": "object",
-  "required": ["id", "kind", "turn", "nations", "summary", "choices", "rng_seed"],
+  "required": ["id", "kind", "turn", "nations", "summary", "choices", "template_key", "tags", "rng_seed"],
   "properties": {
     "id": { "type": "string" },
     "kind": { "type": "string" },
     "turn": { "type": "integer", "minimum": 1 },
     "nations": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
     "summary": { "type": "string" },
+    "template_key": { "type": "string" },
+    "tags": { "type": "array", "items": { "type": "string" } },
     "choices": {
       "type": "array",
       "items": {
@@ -37,7 +39,35 @@
     },
     "assistant_influence": { "type": "array", "items": { "type": "string" } },
     "resolved": { "type": "boolean" },
-    "resolution": { "type": "object" },
+    "resolution": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["chosen_key", "stability_delta", "score_delta", "relation_changes", "logs"],
+          "properties": {
+            "chosen_key": { "type": "string" },
+            "stability_delta": { "type": "number" },
+            "score_delta": { "type": "number" },
+            "relation_changes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["a", "b", "new_status"],
+                "properties": {
+                  "a": { "type": "string" },
+                  "b": { "type": "string" },
+                  "new_status": { "type": "string" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "logs": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "rng_seed": { "type": "integer" }
   },
   "additionalProperties": false

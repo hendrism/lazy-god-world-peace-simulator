@@ -17,7 +17,6 @@ from .models import (
     Race,
     EconomyType,
     Demeanor,
-    HiddenTrait,
     Assistant,
     AssistantClass,
     AssistantEffect,
@@ -31,6 +30,17 @@ from .models import (
     Decision,
 )
 
+from .content import EVENT_TEMPLATES, NATION_ARCHETYPES, EventTemplate, NationArchetype
+
+
+GOD_QUIPS = {
+    StabilityState.golden_age: "Behold! Mortals write musicals about your benevolence.",
+    StabilityState.peaceful: "A serene hum blankets the world—don't nap through it.",
+    StabilityState.stable: "Steady as a cosmic sofa. Comfortable, but keep an eye open.",
+    StabilityState.tense: "You can almost hear the tea cups rattling. Maybe intervene?",
+    StabilityState.chaotic: "Fires everywhere. Some metaphorical, some disappointingly real.",
+}
+
 
 class GameEngine:
     """Encapsulates the game state and rules.
@@ -41,43 +51,58 @@ class GameEngine:
     """
 
     def __init__(self, seed: Optional[int] = None) -> None:
-        self.rng = random.Random(seed)
+        self.seed = seed if seed is not None else random.randint(1, 1_000_000)
+        self.rng = random.Random(self.seed)
         self.active_runs: Dict[str, GameState] = {}
+        self.run_rngs: Dict[str, random.Random] = {}
 
-    def _generate_nation(self) -> Nation:
-        # Generate a nation with random attributes
-        nid = f"nation_{uuid.uuid4().hex[:8]}"
-        name = self._make_name()
-        race = self.rng.choice(list(Race))
-        economy = self.rng.choice(list(EconomyType))
-        demeanor = self.rng.choice(list(Demeanor))
-        hidden_traits: List[HiddenTrait] = self.rng.sample(
-            [
-                "blood_feud",
-                "xenophile",
-                "zealot",
-                "isolationist",
-                "mercantile",
-                "mystic",
-                "martial_culture",
-                "expansionist",
-                "pacifist",
-                "plutocracy",
-            ],
-            k=self.rng.randint(1, 3),
-        )
+    def _generate_nation(self, run_id: str, archetype: NationArchetype) -> Nation:
+        run_rng = self.run_rngs[run_id]
+        nid = f"nation_{run_rng.getrandbits(32):08x}"
+        name = self._make_name(run_rng, archetype)
+        prosperity = round(run_rng.uniform(*archetype.prosperity_range), 2)
+        unrest = round(run_rng.uniform(*archetype.unrest_range), 2)
+        power = round(run_rng.uniform(*archetype.power_range), 2)
+        population = run_rng.randint(15_000, 90_000_000)
+        base_traits = list(archetype.hidden_traits)
+        optional_traits = [
+            "blood_feud",
+            "xenophile",
+            "zealot",
+            "isolationist",
+            "mercantile",
+            "mystic",
+            "martial_culture",
+            "expansionist",
+            "pacifist",
+            "plutocracy",
+            "festival_culture",
+            "storm_riders",
+            "shadow_brokers",
+        ]
+        # ensure optional traits differ from base ones
+        extra_choices = [t for t in optional_traits if t not in base_traits]
+        run_rng.shuffle(extra_choices)
+        hidden_traits: List[HiddenTrait] = base_traits + extra_choices[: max(0, 3 - len(base_traits))]
         return Nation(
             id=nid,
             name=name,
-            primary_race=race,
-            economy_type=economy,
-            demeanor=demeanor,
+            archetype=archetype.key,
+            primary_race=archetype.race,
+            economy_type=archetype.economy,
+            demeanor=archetype.demeanor,
             hidden_traits=hidden_traits,
+            power=power,
+            population=population,
+            prosperity=prosperity,
+            unrest=unrest,
         )
 
-    def _make_name(self) -> str:
-        syllables = ["Ar", "Bel", "Cor", "Dor", "El", "Fa", "Gal", "Har", "Iv", "Jar"]
-        return self.rng.choice(syllables) + self.rng.choice(syllables) + self.rng.choice(["ia", "on", "en", "ar", "ur"])
+    def _make_name(self, run_rng: random.Random, archetype: NationArchetype) -> str:
+        prefix = run_rng.choice(archetype.name_prefixes)
+        suffix = run_rng.choice(archetype.name_suffixes)
+        joiner = " " if run_rng.random() > 0.5 else ""
+        return prefix + joiner + suffix
 
     def _generate_assistant(self) -> Assistant:
         # For now, return a Prophet assistant at level 1
@@ -98,11 +123,19 @@ class GameEngine:
         world_theme: str = "classic_fantasy",
         turn_limit: int = 20,
         difficulty: str = "normal",
+        seed: Optional[int] = None,
     ) -> GameState:
         """Initialize a new game run with a set of nations and assistants."""
         run_id = f"run_{uuid.uuid4().hex[:8]}"
-        # Generate nations (for proof‑of‑concept we create 6)
-        nations = {n.id: n for n in (self._generate_nation() for _ in range(6))}
+        run_seed = seed if seed is not None else self.rng.randint(1, 9_999_999)
+        self.run_rngs[run_id] = random.Random(run_seed)
+        # Generate nations from curated archetypes
+        run_rng = self.run_rngs[run_id]
+        archetypes = run_rng.sample(NATION_ARCHETYPES, k=min(8, len(NATION_ARCHETYPES)))
+        nations = {}
+        for archetype in archetypes:
+            nation = self._generate_nation(run_id, archetype)
+            nations[nation.id] = nation
         # A single unlocked assistant
         assistants = {"assistant_prophet": self._generate_assistant()}
         state = GameState(
@@ -119,6 +152,10 @@ class GameEngine:
             world_theme=world_theme,
             run_status="active",
             turn_limit=turn_limit,
+            seed=run_seed,
+            stability_history=[0.5],
+            revealed_traits={nid: [] for nid in nations},
+            god_quips=[],
         )
         self.active_runs[run_id] = state
         return state
@@ -136,38 +173,34 @@ class GameEngine:
             return StabilityState.chaotic
 
     def _generate_event(self, state: GameState) -> Event:
+        run_rng = self.run_rngs[state.run_id]
         # Choose two random nations for the event
-        nation_ids = self.rng.sample(list(state.nations.keys()), k=2)
-        # Compose summary
-        summary = f"Encounter between {state.nations[nation_ids[0]].name} and {state.nations[nation_ids[1]].name}."
-        # Define generic choices
-        choices = [
-            EventChoice(
-                key="peace",
-                label="Broker peace",
-                effects=[EventChoiceEffect(target="global", attribute="stability", delta=0.1), EventChoiceEffect(target="score", attribute="points", delta=100.0)],
-            ),
-            EventChoice(
-                key="hostile",
-                label="Encourage conflict",
-                effects=[EventChoiceEffect(target="global", attribute="stability", delta=-0.2), EventChoiceEffect(target="score", attribute="points", delta=50.0)],
-            ),
-            EventChoice(
-                key="trade",
-                label="Promote trade",
-                effects=[EventChoiceEffect(target="global", attribute="stability", delta=0.05), EventChoiceEffect(target="score", attribute="points", delta=70.0)],
-            ),
-        ]
+        nation_ids = run_rng.sample(list(state.nations.keys()), k=2)
+        template = run_rng.choice(EVENT_TEMPLATES)
+        name_a = state.nations[nation_ids[0]].name
+        name_b = state.nations[nation_ids[1]].name
+        summary = template.summary_template.format(a=name_a, b=name_b)
+        choices = self._build_choices_from_template(template)
         event = Event(
-            id=f"event_{uuid.uuid4().hex[:8]}",
-            kind=EventKind.interaction,
+            id=f"event_{run_rng.getrandbits(32):08x}",
+            kind=template.kind,
             turn=state.turn,
             nations=nation_ids,
             summary=summary,
             choices=choices,
+            template_key=template.key,
+            tags=list(template.tags),
             assistant_influence=list(state.assistants.keys()),
+            rng_seed=run_rng.randint(0, 10_000),
         )
         return event
+
+    def _build_choices_from_template(self, template: EventTemplate) -> List[EventChoice]:
+        return [
+            EventChoice(key="peace", label="Champion cooperation", effects=list(template.peace_effects)),
+            EventChoice(key="hostile", label="Apply divine pressure", effects=list(template.hostile_effects)),
+            EventChoice(key="trade", label="Broker clever trade", effects=list(template.trade_effects)),
+        ]
 
     def get_state(self, run_id: str) -> Optional[GameState]:
         return self.active_runs.get(run_id)
@@ -207,8 +240,9 @@ class GameEngine:
                 stability_delta += effect.delta
             elif effect.target == "score" and effect.attribute == "points":
                 score_delta += int(effect.delta)
+        previous_stability_state = state.stability_state
         # Update stability and compute new state
-        state.stability = max(0.0, min(1.0, round(state.stability + stability_delta, 2)))
+        state.stability = max(0.0, min(1.0, round(state.stability + stability_delta, 3)))
         state.score += score_delta
         # Update streaks
         if choice_key_value == Decision.peace.value:
@@ -220,8 +254,39 @@ class GameEngine:
         else:
             # trade resets nothing
             pass
+        streak_logs: List[str] = []
+        if state.peace_streak and state.peace_streak % 3 == 0:
+            bonus = 75
+            state.score += bonus
+            streak_logs.append(f"Peace streak of {state.peace_streak}! Bonus score +{bonus}.")
+            reveal = self._reveal_hidden_trait(state, event.nations)
+            if reveal:
+                streak_logs.append(reveal)
+        if state.chaos_streak and state.chaos_streak % 3 == 0:
+            penalty = 40
+            state.score = max(0, state.score - penalty)
+            streak_logs.append(f"Chaos streak of {state.chaos_streak}. Divine cleanup tax -{penalty}.")
         # Determine stability state
         state.stability_state = self._compute_stability_state(state.stability)
+        state.stability_history.append(state.stability)
+        quip = None
+        if state.stability_state != previous_stability_state:
+            quip = GOD_QUIPS[state.stability_state]
+            state.god_quips.append(quip)
+        # Prophet hint on positive stability swing
+        hint: Optional[str] = None
+        if stability_delta > 0 and "assistant_prophet" in state.assistants:
+            hint = self._reveal_hidden_trait(state, event.nations)
+        resolution_logs = [
+            f"Decision {choice_key_value} applied. Stability change {stability_delta:+.2f}, score change {score_delta:+d}."
+        ]
+        if streak_logs:
+            resolution_logs.extend(streak_logs)
+        if quip:
+            resolution_logs.append(f"God quip: {quip}")
+        if hint:
+            resolution_logs.append(hint)
+        resolution_logs.append("Punchline: " + self._derive_punchline(event))
         # Mark event resolved
         event.resolved = True
         event.resolution = EventResolution(
@@ -229,7 +294,7 @@ class GameEngine:
             stability_delta=stability_delta,
             score_delta=score_delta,
             relation_changes=relation_changes,
-            logs=[f"Decision {choice_key} applied. Stability change {stability_delta}, score change {score_delta}."]
+            logs=resolution_logs,
         )
         # Advance to next turn if not ended
         state.turn += 1
@@ -239,6 +304,35 @@ class GameEngine:
         elif state.turn > state.turn_limit:
             state.run_status = "turn_limit"
         return state, None
+
+    def _derive_punchline(self, event: Event) -> str:
+        if event.template_key:
+            for template in EVENT_TEMPLATES:
+                if template.key == event.template_key:
+                    return template.punchline
+        summary = event.summary
+        # Attempt to match the template punchline based on key prefix
+        for template in EVENT_TEMPLATES:
+            if summary.startswith(template.summary_template.split("{", 1)[0]):
+                return template.punchline
+        return "The gods shrug enigmatically."
+
+    def _reveal_hidden_trait(self, state: GameState, nation_ids: List[str]) -> Optional[str]:
+        run_rng = self.run_rngs[state.run_id]
+        candidates: List[Tuple[str, str]] = []
+        for nid in nation_ids:
+            known = set(state.revealed_traits[nid])
+            hidden = [trait for trait in state.nations[nid].hidden_traits if trait not in known]
+            if hidden:
+                trait = run_rng.choice(hidden)
+                candidates.append((nid, trait))
+        if not candidates:
+            return None
+        nid, trait = run_rng.choice(candidates)
+        state.revealed_traits[nid].append(trait)
+        nation_name = state.nations[nid].name
+        readable_trait = trait.replace("_", " ")
+        return f"Prophet reveals that {nation_name} hides the trait: {readable_trait}."
 
     def next_turn(self, run_id: str) -> Tuple[Optional[Event], Optional[str]]:
         """Advance the run by generating a new event if possible.
